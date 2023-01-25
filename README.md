@@ -1,7 +1,9 @@
 # GeneExt - Gene extension for improved scRNA-seq data counting   
 
 # Not Implemented:
-* mapping module  
+* mapping module 
+* the option to select top N orphan peaks   
+* orphan peak linkage via splice junctions  
 * clean temporary directory  
 * to output gtf files for bed inputs  
 * __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
@@ -11,8 +13,6 @@
 
 Try filtering orphan peaks by coverage or something else - e.g. take the top X peaks   
 What to do with an exonic structure?  
-
-
 
 
 # Table of Contents
@@ -96,10 +96,8 @@ GENOMEFA=~/genomes/genome.fa # path to genome sequence fasta file for genome ind
 R2=data/cells.R2.fastq.gz # R2 reads from a 10x experiment 
 NCPU=5 # number of cores to use for mapping 
 
-
 # generate the genome index (skip if you already have a genome index)   
 STAR --runMode genomeGenerate --runThreadN $NCPU --genomeDir $STARIDX --genomeFastaFiles $GENOMEFA
-
 
 # run STAR alignment
 STAR --genomeDir $STARIDX --outFilterMultimapNmax 10 --runThreadN $NCPU --readFilesIn $R2 --outFileNamePrefix cells --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outSAMattributes Standard
