@@ -4,8 +4,7 @@
 * mapping module  
 * clean temporary directory  
 * to output gtf files for bed inputs  
-
-* __cellranger mock gtf__
+* __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
 * Reporting:  
   * coverage around TES metaplot 
   * estimated intergenic mapping proportion?   
@@ -84,10 +83,22 @@ Note:
 You can either use `cellranger` `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`) or generate an alignment yourself with any splice-aware aligner. Below is an example of how to generate such an alignment with `STAR` aligner:  
 
 ```
-# generate the genome index   
+STAR_IDX=~/genomes/octopus_cnag/star_idx/ # path to the STAR index 
+R2=data/cells.R2.fastq.gz # R2 reads from a 10x experiment
+NCPU=5 # number of cores to use for mapping 
 
-# run alignment  
+
+# generate the genome index (skip if you already have a genome index)   
+[t.b.a]
+
+# run STAR alignment
+STAR --genomeDir $STAR_IDX --outFilterMultimapNmax 10 --runThreadN $NCPU --readFilesIn $R2 --outFileNamePrefix cells --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outSAMattributes Standard
 ```
+
+Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `GeneExt`.  
+Note: if your sequencing data is contained in multiple `fastq.gz` files, you should first concatenate them into a single one:  
+
+```zcat lane1.R2.fastq.gz lane2.R2.fastq.gz  | gzip > data/cells.R2.fastq.gz```
 
 
 ## Important parameters   
