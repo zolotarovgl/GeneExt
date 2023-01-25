@@ -5,25 +5,18 @@
 - [x] coverage filtering for the peaks  
   - [x] how to filter the peaks? 
   - [ ] shall we filter before or after the extension - test  
-- [ ] orphan peak linkage via splice junctions  
+- [ ] orphan peak linkage via splice junctions if a splice junctions file is provided   
 - [ ] clean temporary directory  
 - [ ] to output gtf files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
 - [ ] Reporting:  
   - [ ] coverage around TES metaplot 
-  - [ ] estimated intergenic mapping proportion?   
-
-Try filtering orphan peaks by coverage or something else - e.g. take the top X peaks   
-What to do with an exonic structure?  
-
-
-__CAVE: Peak filtering!!! Too many peaks__
-
+  - [ ] estimated intergenic mapping proportion? - count the reads with pysam 
 
 # Table of Contents
 1. [Installation](#installation)
 2. [Manual](#Manual)
-
+3. [Tutorial](#Tutorial)
 
 # Installation  
 
