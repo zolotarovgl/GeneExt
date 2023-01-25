@@ -9,7 +9,9 @@
   * coverage around TES metaplot 
   * estimated intergenic mapping proportion?   
 
-Try filtering orphan peaks by coverage or something else.
+Try filtering orphan peaks by coverage or something else - e.g. take the top X peaks   
+What to do with an exonic structure?  
+
 
 
 
@@ -77,28 +79,33 @@ Note:
 1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
 2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
 
-## Where do I get a .bam file?   
+## Where can I get a .bam file?   
 
-`.bam` file should contain scRNA-seq reads mapped to your genome.  
-You can either use `cellranger` `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`) or generate an alignment yourself with any splice-aware aligner. Below is an example of how to generate such an alignment with `STAR` aligner:  
+If you already have used `cellranger`, then you can simply use its `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
-```
-STAR_IDX=~/genomes/octopus_cnag/star_idx/ # path to the STAR index 
-R2=data/cells.R2.fastq.gz # R2 reads from a 10x experiment
+Note: for now, `GeneExt` only accepths a single alignment file, so you should concatenate your scRNA-seq fastq file for the following step:  
+
+```cat lane1.R2.fastq.gz lane2.R2.fastq.gz > data/cells.R2.fastq.gz```
+
+Below is an example of how to generate such an alignment with `STAR` aligner:  
+
+```bash
+STARIDX=~/genomes/star_idx/ # path to the STAR index
+GENOMEFA=~/genomes/genome.fa # path to genome sequence fasta file for genome index 
+
+R2=data/cells.R2.fastq.gz # R2 reads from a 10x experiment 
 NCPU=5 # number of cores to use for mapping 
 
 
 # generate the genome index (skip if you already have a genome index)   
-[t.b.a]
+STAR --runMode genomeGenerate --runThreadN $NCPU --genomeDir $STARIDX --genomeFastaFiles $GENOMEFA
+
 
 # run STAR alignment
-STAR --genomeDir $STAR_IDX --outFilterMultimapNmax 10 --runThreadN $NCPU --readFilesIn $R2 --outFileNamePrefix cells --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outSAMattributes Standard
+STAR --genomeDir $STARIDX --outFilterMultimapNmax 10 --runThreadN $NCPU --readFilesIn $R2 --outFileNamePrefix cells --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outSAMattributes Standard
 ```
 
 Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `GeneExt`.  
-Note: if your sequencing data is contained in multiple `fastq.gz` files, you should first concatenate them into a single one:  
-
-```zcat lane1.R2.fastq.gz lane2.R2.fastq.gz  | gzip > data/cells.R2.fastq.gz```
 
 
 ## Important parameters   
@@ -141,6 +148,14 @@ Now, you can also try running the tool with an `--orphan` setting:
 
 ```python geneext.py -g sample/genome_sample.gtf -b sample/sample_10x.bam -m 10000 --orphan -o genome_extended_orphan.gtf```
 
+## Starting from peaks   
+
+If you already know coordinates of mRNA 3' ends (e.g. you have a 3P-seq or FLAM-seq data or similar), you can skip peak calling step above and use `GeneExt` to simply assign the peaks to the genes:  
+
+
+```python geneext.py -g sample/genome_sample.gtf -p sample/sample_peaks.bed -m 10000 --orphan -o genome_extended_orphan.gtf```  
+
+As in previous case, executing with `--orphan`  will result in addition of the unassigned peaks to the final genome annotation.  
 
 
 ## Output files   
@@ -151,14 +166,18 @@ Now, you can also try running the tool with an `--orphan` setting:
 
 
 
+## Help   
+
+If you have problems with running `GeneExt`, please, raise an issue in this directory or drop an email to `gzolotarov@crg.es`.
+
 
 
 ## Available options   
 
 
 ```man
-usage: geneext.py [-h] [-b B] [-g G] [-p P] [-o O] [-m M] [-inf INF]
-                  [-ouf OUF] [-t T] [-v V] [-j J] [-e E]
+usage: geneext.py [-h] [-b B] -g G [-p P] -o O -m M [-inf INF] [-ouf OUF]
+                  [-t T] [-tag TAG] [-v V] [-j J] [-e E] [--orphan]
 
 Extend genes in 3' direction using single-cell RNA-seq data
 
@@ -174,9 +193,11 @@ optional arguments:
   -inf INF    Input genes file format, if None, will be guessed from a file extension.
   -ouf OUF    Output file format, if not given, will be guessed from a file extension.
   -t T        Temporary directory. [tmp]
+  -tag TAG    Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]
   -v V        Verbosity level. 0,[1],2
   -j J        Number of cores for samtools. [1]
   -e E        How to extend the gene (only for .gff/.gtf files) [new_mrna]
                 * new_transcript - creates a new transcript feature with the last exon extended
                 * new exon - creates an extended last exon
+  --orphan    NOT IMPLEMENTED! Whether to add orphan peaks
 ```
