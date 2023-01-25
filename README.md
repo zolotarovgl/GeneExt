@@ -1,19 +1,20 @@
 # GeneExt - Gene extension for improved scRNA-seq data counting   
 
 # Not Implemented:
-* mapping module 
-* the option to select top N orphan peaks   
-* orphan peak linkage via splice junctions  
-* clean temporary directory  
-* to output gtf files for bed inputs  
-* __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
-* Reporting:  
-  * coverage around TES metaplot 
-  * estimated intergenic mapping proportion?   
+- [ ] coverage filtering for the peaks  
+- [ ] orphan peak linkage via splice junctions  
+- [ ] clean temporary directory  
+- [ ] to output gtf files for bed inputs  
+- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
+- [ ] Reporting:  
+  - [ ] coverage around TES metaplot 
+  - [ ] estimated intergenic mapping proportion?   
 
 Try filtering orphan peaks by coverage or something else - e.g. take the top X peaks   
 What to do with an exonic structure?  
 
+
+__CAVE: Peak filtering!!! Too many peaks__
 
 # Table of Contents
 1. [Installation](#installation)
@@ -83,7 +84,7 @@ Note:
 
 If you already have used `cellranger`, then you can simply use its `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
-Note: for now, `GeneExt` only accepths a single alignment file, so you should concatenate your scRNA-seq fastq file for the following step:  
+Note 1: for now, `GeneExt` only accepths a single alignment file, so you should concatenate your scRNA-seq fastq file for the following step:  
 
 ```cat lane1.R2.fastq.gz lane2.R2.fastq.gz > data/cells.R2.fastq.gz```
 
