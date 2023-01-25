@@ -54,32 +54,40 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 
 ## Important parameters   
 
-### Maximum extension length   
-
-`-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
-However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__:  
-!['Missing_gene'](./img/missing_gene.png)
-
-Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis "What are the orphan peaks?").
-
 ## Input & Output   
 
-`GeneExt` accepts following input formats and converts them to the output:   
+> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
+>
+> Anna Karenina principle for genome annotation files
+
+To run `GeneExt`, you will need the following:  
+
+1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis "Where do I get my .bam file?")  
+2. Genome annotation in the `bed`, `gff` or `gtf` formats  
+
+Note: in a `bed` file, only gene ranges should be present.   
+
+`GeneExt` accepts following annotion input formats and converts them to the output:   
 * `bed` &rarr; `crgtf`   
 * `gff` &rarr; `crgtf`,`gtf`  
 * `gtf` &rarr; `crgtf`,`gtf`  
-
-Output:  
 
 In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible ( see "Input debugging").  
 For such cases, it is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
 
 Note:  
-1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unusable for analyses which depend on this structure (e.g. RNA-velocity). 
-2. If genes are provided in a `bed` file, then the output will always be the mock file.  
+1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
+2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
 
+### -m Maximum extension length   
 
-## Extension modes  
+`-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
+However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__:  
+!['Missing_gene'](./img/missing_gene.png)
+
+Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis "What are the orphan peaks?").
+
+### --extension_mode Extension modes  
 
 Depending on the application (or rather your taste), you may want to add extensions differently.  
 Currently, the following modes are available:   
@@ -88,13 +96,15 @@ Currently, the following modes are available:
 
 ![Extension modes](./img/extension_modes.png)
 
-Note: in general, it doesn't matter which type of extension you choose - it will not affect read counting.  
+Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
 
-## What are the "orphan peaks"?  
+### --orphan What are the "orphan peaks"?  
 
-[t.b.a.]
+[t.b.a.] 
 
 # Tutorial  
+
+## Running GeneExt  
 
 Try executing the tool with the sample data:  
 
@@ -108,6 +118,8 @@ Now, you can also try running the tool with an `--orphan` setting:
 ```python geneext.py -g sample/genome_sample.gtf -b sample/sample_10x.bam -m 10000 --orphan -o genome_extended_orphan.gtf```
 
 
+
+## Output files   
 
 
 
