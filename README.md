@@ -1,15 +1,14 @@
 # GeneExt - Gene extension for improved scRNA-seq data counting   
 
-# TODOs:
+# Not Implemented:
 * mapping module  
-* orphan peaks 
 * clean temporary directory  
-* make it possible to output gtf files for bed inputs  
+* to output gtf files for bed inputs  
 
 * __cellranger mock gtf__
-* __orphan peaks__  
-* metaplot - coverage relative to TES
-* add a proper tag to the orphan peaks source or ditch tagging alltogether 
+* Reporting:  
+  * coverage around TES metaplot 
+  * estimated intergenic mapping proportion?   
 
 Try filtering orphan peaks by coverage or something else.
 
