@@ -1,3 +1,4 @@
+!['header'](./img/top.png)
 # GeneExt - Gene extension for improved scRNA-seq data counting   
 
 # Not Implemented:
@@ -15,6 +16,7 @@ What to do with an exonic structure?
 
 
 __CAVE: Peak filtering!!! Too many peaks__
+
 
 # Table of Contents
 1. [Installation](#installation)
