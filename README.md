@@ -52,7 +52,6 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an '-m' parameter (see below).  
 3. After genes are extended, `GeneExt` will write an a file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
 
-## Important parameters   
 
 ## Input & Output   
 
@@ -72,12 +71,26 @@ Note: in a `bed` file, only gene ranges should be present.
 * `gff` &rarr; `crgtf`,`gtf`  
 * `gtf` &rarr; `crgtf`,`gtf`  
 
-In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible ( see "Input debugging").  
+In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible ( see [Input debugging](#input-debugging)).  
 For such cases, it is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
 
 Note:  
 1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
 2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
+
+## Where do I get a .bam file?   
+
+`.bam` file should contain scRNA-seq reads mapped to your genome.  
+You can either use `cellranger` `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`) or generate an alignment yourself with any splice-aware aligner. Below is an example of how to generate such an alignment with `STAR` aligner:  
+
+```
+# generate the genome index   
+
+# run alignment  
+```
+
+
+## Important parameters   
 
 ### -m Maximum extension length   
 
