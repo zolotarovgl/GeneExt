@@ -37,6 +37,14 @@ conda activate genext
 conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools 
 ```
 
+
+# TL;DR  Run
+Once you have dependencies installed, you can try running `GeneExt`:  
+```
+python geneext.py -g [genome .bed/.gtf/.gff] -b [10x.bam] -m [maximal extension,bp] -o [output name]
+```
+
+
 # Manual  
 
 ## Motivation   
@@ -106,7 +114,7 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 
 ## Important parameters   
 
-### -m Maximum extension length   
+### --m Maximal extension length   
 
 `-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
 However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__:  
