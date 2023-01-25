@@ -44,7 +44,7 @@ conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools
 ## Motivation   
 
 Non-model species often have incomplete annotations of their 3-prime untranslated regions (3'-UTRs). At the same time, some of the most popular single-cell RNA sequencing methods are biased towards 3' ends of mRNA molecules. In result, this creates a bias in gene counting for genes with missing 3'-UTRs:   
-!['Gene_counting'](./img/gene_counting.png)
+!['Gene_counting'](./img/gene_counting_problem.png)
 
 To mitigate this effect, `GeneExt` will try to extend the genes in your reference genome by __using the scRNA-seq dataset itself__ (or any 3'-biased type of transcriptomics data). This approach should increase the number of UMI counts registered per gene.  
 
