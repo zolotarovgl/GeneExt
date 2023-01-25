@@ -1,8 +1,10 @@
 !['header'](./img/top.png)
-# GeneExt - Gene extension for improved scRNA-seq data counting   
+# GeneExt - Gene extension for improved single-cell RNA-seq data counting   
 
 # Not Implemented:
-- [ ] coverage filtering for the peaks  
+- [x] coverage filtering for the peaks  
+  - [x] how to filter the peaks? 
+  - [ ] shall we filter before or after the extension - test  
 - [ ] orphan peak linkage via splice junctions  
 - [ ] clean temporary directory  
 - [ ] to output gtf files for bed inputs  

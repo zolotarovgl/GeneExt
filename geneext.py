@@ -21,6 +21,7 @@ parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--orphan',action='store_true', help = 'NOT IMPLEMENTED! Whether to add orphan peaks')
+parser.add_argument('--peakp',default = 75, 'Percentile of peaks to retain for gene extension. [0-100], default [75].\nThis parameter allows to filter out the peaks based on the coverage')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
 
@@ -129,7 +130,6 @@ def outersect_peaks():
         helper.outersect(inputbed_a = genefile_bed,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
     else:
         helper.outersect(inputbed_a = genefile,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
-    quit()
 
 # Orphan peaks   ----- move to the helper later
 # implement
@@ -163,15 +163,16 @@ if __name__ == "__main__":
     if do_macs2:
         print('Runnig macs2.')
         peaksfile = tempdir + '/' + 'allpeaks.bed'
+
         helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
         helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
         helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
         helper.collect_macs_beds(outdir = tempdir,outfile = peaksfile,verbose = verbose)
+
     else:
         print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
 
-# 2. Peak filtering 
-    # outersect peaks with genes:
+# 2. Remove peaks overlapping genes:
     peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
     print(peaksfile)
     if infmt != 'bed':
@@ -183,6 +184,19 @@ if __name__ == "__main__":
     else:
         print("Filtering peaks.")
         helper.outersect(inputbed_a = genefile,inputbed_b = peaksfile,outputbed=peaksfilt,verbose = verbose)
+
+# 3. If used macs to call the peaks, filter the peaks by the coverage:
+    if do_macs2:    
+        print('Calculating peak coverage...')
+        covfile = tempdir + '/' + 'allpeaks_noov_coverage.bed'
+        #tmp_peakfile = tempdir + '/' + 'allpeaks_noov.bed_tmp'
+        # copy filtered file with peaks
+        os.system('cp %s %s' % (peaksfilt,peaksfilt + '_tmp'))
+        helper.get_coverage(inputbed_a=peaksfilt,input_bam = bamfile,outputfile = covfile,verbose = True)
+        print('Filtering by coverage ...')
+        helper.filter_by_coverage(inputfile = covfile,outputfile = peaksfilt,verbose = True)
+
+
 # 3. Extend genes 
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     #helper.extend_genes(genefile,peaksfile,outputfile,int(maxdist),tempdir,verbose,extension_mode,tag = tag)

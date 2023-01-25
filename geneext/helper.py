@@ -40,6 +40,48 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     if verbose:
         print('Done collecting beds: %s' % (outfile))
 
+def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False):
+    cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
+    if verbose:
+        print('Running:\n%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+#def filter_by_coverage(inputfile = None,outputfile = None,verbose = False):
+#    """Given a bedtools coverage result, filter the file by the last column."""
+#    count_threshold = 1000
+#    cmd = "awk '$NF>=%s' %s > %s" % (str(count_threshold),inputfile,outputfile)
+#    if verbose:
+#        print('Running:\n%s' % cmd)
+#    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+def filter_by_coverage(inputfile = None,outputfile = None,percentile = 75,verbose = False):
+    """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile"""
+    if not percentile:
+        count_threshold = 500 # absolutely arbitrary peak coverage threshold
+    else:
+        if verbose:
+            print('Coverage threshold not set. Getting a %s-th percentile ...' % percentile)
+        cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
+        if verbose:
+            print('Running:\n%s' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        out = ps.communicate()[0].decode("utf-8").rstrip()
+        count_threshold = out
+        if verbose:
+            print('%s-th coverage percentile for %s is %s reads. Filtering out the peaks below this value...' % (percentile,inputfile,str(count_threshold)))
+
+    cmd = "awk '$NF>=%s' %s | cut -f 1-6 > %s" % (str(count_threshold),inputfile,outputfile)
+    if verbose:
+        print('Running:\n%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    # Report how many peaks have been retained:
+    if verbose:
+        ps = subprocess.Popen('wc -l %s' % outputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        n = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
+        ps = subprocess.Popen('wc -l %s' % inputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        N = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
+        print('Retained %s/%s (%s %%)' % (str(n),str(N),str(round(int(n)/int(N)*100,2))))
+
 def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
     """This function returns non-overlapping peaks"""
     if by_strand:
@@ -50,7 +92,7 @@ def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
     if verbose:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-
+        
 # Parse helper
 def gxf2bed(infile,outfile,featuretype = None):
     """This function loads the gff/gtf file and returns a bed file"""
@@ -83,15 +125,12 @@ def guess_format(filepath,verbose = False):
     else:
         raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n%s' % '\n'.join(head)))
 
-
-
 def parse_bed(infile):
     with open(infile) as file:
         lines = [line.rstrip().split('\t') for line in file if not '#' in line]
         regs = [Region(chrom = x[0],start = int(x[1]),end = int(x[2]),id = str(x[3]),strand = str(x[5]),score = int(x[4])) for x in lines]
         return(regs)
     file.close()
-
 
 def parse_gff(infile,featuretype = None):
     def gff_get_ID(x):
@@ -521,9 +560,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 def extend_gtf(db,extend_dictionary,output_file,extension_mode = 'new_transcript',tag = None,verbose = False):
     raise(NotImplementedError('Extension is not yet available for .gtf files!'))
 
-
 # Gene extension function 
-
 def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_type,infmt=None,outfmt=None,tag = 'ext'):
     # files with extensions:
     extension_table = temp_dir + '/extensions.tsv'
