@@ -1,7 +1,7 @@
 !['header'](./img/top.png)
 # GeneExt - Gene extension for improved single-cell RNA-seq data counting   
 
-# Not Implemented:
+# TODOs:
 - [x] coverage filtering for the peaks  
   - [x] how to filter the peaks? 
   - [ ] shall we filter before or after the extension - test  
@@ -124,6 +124,10 @@ Currently, the following modes are available:
 ![Extension modes](./img/extension_modes.png)
 
 Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
+
+### --peakp Filtering peaks based on coverage  
+
+To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage. By default, `GeneExt` will only consider to 25% of the peaks called in the genome.   
 
 ### --orphan What are the "orphan peaks"?  
 
