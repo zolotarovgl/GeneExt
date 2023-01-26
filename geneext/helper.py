@@ -46,14 +46,6 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-#def filter_by_coverage(inputfile = None,outputfile = None,verbose = False):
-#    """Given a bedtools coverage result, filter the file by the last column."""
-#    count_threshold = 1000
-#    cmd = "awk '$NF>=%s' %s > %s" % (str(count_threshold),inputfile,outputfile)
-#    if verbose:
-#        print('Running:\n%s' % cmd)
-#    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-
 def filter_by_coverage(inputfile = None,outputfile = None,percentile = None,verbose = False):
     """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile"""
     if not percentile:

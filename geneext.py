@@ -39,7 +39,8 @@ extension_mode = args.e
 threads = args.j
 tag = args.tag
 
-
+# peak coverage percentile:
+coverage_percentile = args.peakp
 
 scriptloc = os.path.dirname(os.path.realpath(__file__))
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
         os.system('cp %s %s' % (peaksfilt,peaksfilt + '_tmp'))
         helper.get_coverage(inputbed_a=peaksfilt,input_bam = bamfile,outputfile = covfile,verbose = True)
         print('Filtering by coverage ...')
-        helper.filter_by_coverage(inputfile = covfile,outputfile = peaksfilt,verbose = True)
+        helper.filter_by_coverage(inputfile = covfile,outputfile = peaksfilt,percentile = coverage_percentile,verbose = True)
 
 
 # 3. Extend genes 
