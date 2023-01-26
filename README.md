@@ -7,6 +7,9 @@
   - [ ] shall we filter before or after the extension - test  
 - [ ] orphan peak linkage via splice junctions if a splice junctions file is provided   
 - [ ] clean temporary directory  
+- [ ] add log file  
+- [ ] solve the problem with non-unique orphan peak naming   
+- [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output gtf files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
 - [ ] add man orphan peaks  
@@ -53,11 +56,14 @@ python geneext.py -g [genome .bed/.gtf/.gff] -b [10x.bam] -m [maximal extension,
 ## Motivation   
 
 Non-model species often have incomplete annotations of their 3-prime untranslated regions (3'-UTRs). At the same time, some of the most popular single-cell RNA sequencing methods are biased towards 3' ends of mRNA molecules. In result, this creates a bias in gene counting for genes with missing 3'-UTRs:   
-!['Gene_counting'](./img/gene_counting_problem.png)
+![Gene_counting](./img/gene_counting_problem.png)
 
 To mitigate this effect, `GeneExt` will try to extend the genes in your reference genome by __using the scRNA-seq dataset itself__ (or any 3'-biased type of transcriptomics data). This approach should increase the number of UMI counts registered per gene.  
 
 ## How it works  
+
+![Pipeline](./img/pipeline.png)
+
 1. `GeneExt` is supposed to accept alignment files of reads from any 3'-end biased single-cell or bulk RNA-seq protocol. It will then call peaks from this data using `macs2` software and will try to extend genes to the peaks downstream. Alternatively, if you already have peaks you want to extend the genes to (e.g. somehow determined mRNA cleavage site coordinates), having `macs2` installed is not necessary. 
 2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an '-m' parameter (see below).  
 3. After genes are extended, `GeneExt` will write an a file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
@@ -120,7 +126,9 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 ### --m Maximal extension length   
 
 `-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
-However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
+However, the genome annotation will surely __miss some genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
+
+![Gene misassignment](./img/gene_misassignment.png)
 
 Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis "What are the orphan peaks?").
 

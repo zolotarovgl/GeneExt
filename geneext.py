@@ -21,7 +21,7 @@ parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--orphan',action='store_true', help = 'NOT IMPLEMENTED! Whether to add orphan peaks')
-parser.add_argument('--peakp',default = 75, 'Percentile of peaks to retain for gene extension. [0-100], default [75].\nThis parameter allows to filter out the peaks based on the coverage')
+parser.add_argument('--peakp',default = 75, help = 'Coverage percentile of macs2 peaks to retain for gene extension. [0-100, 75 by default].\nThis parameter allows to filter out the peaks based on the coverage')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
 

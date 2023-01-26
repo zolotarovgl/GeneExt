@@ -54,13 +54,14 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
 #        print('Running:\n%s' % cmd)
 #    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-def filter_by_coverage(inputfile = None,outputfile = None,percentile = 75,verbose = False):
+def filter_by_coverage(inputfile = None,outputfile = None,percentile = None,verbose = False):
     """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile"""
     if not percentile:
-        count_threshold = 500 # absolutely arbitrary peak coverage threshold
+        print('Coverage percentile is not set, retaining all the peaks ...')
+        count_threshold = 0 # absolutely arbitrary peak coverage threshold
     else:
         if verbose:
-            print('Coverage threshold not set. Getting a %s-th percentile ...' % percentile)
+            print('Getting a %s-th percentile ...' % percentile)
         cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
         if verbose:
             print('Running:\n%s' % cmd)
@@ -170,32 +171,6 @@ def parse_gtf(infile,featuretype = None):
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6])) for x in lines if x[2]==featuretype]
     return(regs)
 
-#def check_ext_read_file(filepath,fmt = None,featuretype = None):
-#    """Get file extension and load a file as a list of Region objects."""
-#    if not fmt:
-#        # get extension from file name:
-#        extension = os.path.splitext(filepath)[-1][1:]
-#    else:
-#        extension = fmt
-#    # check if bed:
-#    with open(filepath) as myfile:
-#        head = next(myfile)
-#    n_fields = len(head.split('\t'))
-#    if extension == 'bed':
-#        if n_fields == 6:
-#            return(parse_bed(filepath))
-#        else:
-#            raise ValueError('Guessed %s extension from %s. Number of fields is wrong (%s).' % (extension,filepath,n_fields))
-#    if extension == 'gtf' or extension == 'gff':
-#        if n_fields == 9:
-#            if extension == 'gff':
-#                return(parse_gff(filepath,featuretype))
-#            else:
-#                return(parse_gtf(filepath,featuretype))
-#        else:
-#            raise ValueError('Guessed %s extension from %s. Number of fields is wrong (%s).' % (extension,filepath,n_fields))
-#    else:
-#        raise ValueError('Unknown file extension in file %s. Please, rename your file: <filename>[.bed/.gff/.gtf]' % (filepath))
 
 def guess_format(filepath,fmt = None,featuretype = None):
     """Guess file extension"""
@@ -718,14 +693,18 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
         if fmt == 'gff':
             with open(infile,'a') as file:
                 for reg in regs:
-                    file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s' % 'g.'+reg.id])+'\n')
-                    file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s; Parent=%s' % ('g.'+reg.id,'t.'+reg.id)])+'\n')
-                    file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s; Parent=%s' % ('g.' + reg.id, 't.'+ reg.id)])+'\n')
+                    gid = 'g.'+reg.id
+                    tid = 't.'+reg.id
+                    file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s' % gid])+'\n')
+                    file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s; Parent=%s' % (gid,tid)])+'\n')
+                    file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','ID=%s; Parent=%s' % (gid, tid)])+'\n')
         elif fmt == 'gtf':
             # write to the output file:
             with open(infile,'a') as file:
                 for reg in regs:
-                    file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % 'g.'+reg.id])+'\n')
-                    file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % ('g.'+reg.id,'t.'+reg.id)])+'\n')
-                    file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % ('g.' + reg.id, 't.'+ reg.id)])+'\n')
-        quit()
+                    gid = 'g.'+reg.id
+                    tid = 't.'+reg.id
+                    file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % gid])+'\n')
+                    file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
+                    file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
+        print('%s orphan peaks added' % (str(len(regs))))
