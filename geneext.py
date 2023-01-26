@@ -22,6 +22,7 @@ parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--orphan',action='store_true', help = 'NOT IMPLEMENTED! Whether to add orphan peaks')
 parser.add_argument('--peakp',default = 75, help = 'Coverage percentile of macs2 peaks to retain for gene extension. [0-100, 75 by default].\nThis parameter allows to filter out the peaks based on the coverage')
+parser.add_argument('--report', action='store_true', help = 'Use this option to generate a report.')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
 
@@ -51,9 +52,11 @@ def error_print():
 # pipeline settings:
 do_mapping = False
 do_macs2 = False 
-do_report = False # add the option!
+do_report = args.report # add the option!
 do_orphan = args.orphan
 
+
+#######################################################################
 if peaksfile is None and bamfile is None:
     print("Please, specify either alignment [-b] or peaks file [-p]!")
     error_print()
@@ -109,31 +112,36 @@ if not os.path.exists(tempdir):
 
 from geneext import helper
 
-# guess the format of input annotation 
-infmt = helper.guess_format(genefile)
-outfmt = 'gtf'
-
 
 ########### Main #####################
 ######################################
+def parse_input_output_formats():
+    # guess the format of input annotation 
+    infmt = helper.guess_format(genefile)
+    outfmt = 'gtf'
+    if verbose:
+        print('Input: %s, guessed format: %s\nOutput: %s, guessed format: %s' % (genefile,infmt,outputfile,outfmt))
+    return(infmt,outfmt)
+
+
 def run_peakcalling():
     helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
     helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def outersect_peaks():
-    peaksfilt = tempdir + '/' + 'peaksfilt.bed'
+def outersect_peaks(genefile = None,peaksfile = None,outputbed = None,verbose = None):
+    """Take macs peaks and outersect them with the genome annotation file"""
     if infmt != 'bed':
         # convert to bed:
-        genefile_bed = tempdir + '/' + 'genes.bed'
-        helper.gxf2bed(infile = genefile,outfile = genefile_bed)
-        helper.outersect(inputbed_a = genefile_bed,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+# CAVE! Do you need to convert the input file to bed? 
+        #genefile_bed = tempdir + '/' + 'genes.bed'
+        #helper.gxf2bed(infile = genefile,outfile = genefile_bed)
+        #helper.outersect(inputbed_a = genefile_bed,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
     else:
-        helper.outersect(inputbed_a = genefile,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
 
-# Orphan peaks   ----- move to the helper later
-# implement
 def run_orphan(infmt,outfmt):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
     # aha, you have to do a second round of outersection but this time also regardless of the strand 
@@ -154,12 +162,28 @@ def run_orphan(infmt,outfmt):
     else:
         print("Don't know how to add orphan peaks!")
 
+
+#     genefile_bed = tempdir + '/' + 'genes.bed'
+#     helper.gxf2bed(infile = genefile,outfile = genefile_bed,featuretype = 'gene')
+#     helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile_bed,outputbed=peaksfilt,verbose = verbose)
+#else:
+#    print("Filtering peaks.")
+#    helper.outersect(inputbed_a = genefile,inputbed_b = peaksfile,outputbed=peaksfilt,verbose = verbose)
+
+
 #####################################
 
 if __name__ == "__main__":
+    # parse input and output formats - run the pipeline accordingly
+    infmt,outfmt = parse_input_output_formats()
+    if not infmt in ['bed','gff','gtf']:
+        print('Unknown input format!')
+        quit()
+    
+
+# 0. MAPPING - not implemented     
     if do_mapping:
         raise(NotImplementedError())
-
 # 1. MACS2
     if do_macs2:
         print('Runnig macs2.')
@@ -175,18 +199,11 @@ if __name__ == "__main__":
 
 # 2. Remove peaks overlapping genes:
     peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
-    print(peaksfile)
-    if infmt != 'bed':
-        print('Converting gff/gtf to bed. Filtering peaks ...')
-        # convert to bed:
-        genefile_bed = tempdir + '/' + 'genes.bed'
-        helper.gxf2bed(infile = genefile,outfile = genefile_bed,featuretype = 'gene')
-        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile_bed,outputbed=peaksfilt,verbose = verbose)
-    else:
-        print("Filtering peaks.")
-        helper.outersect(inputbed_a = genefile,inputbed_b = peaksfile,outputbed=peaksfilt,verbose = verbose)
+    print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+    outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
 
 # 3. If used macs to call the peaks, filter the peaks by the coverage:
+# REPLACE WITH A PIPELINE FUNCTION 
     if do_macs2:    
         print('Calculating peak coverage...')
         covfile = tempdir + '/' + 'allpeaks_noov_coverage.bed'
@@ -197,8 +214,8 @@ if __name__ == "__main__":
         print('Filtering by coverage ...')
         helper.filter_by_coverage(inputfile = covfile,outputfile = peaksfilt,percentile = coverage_percentile,verbose = True)
 
-
 # 3. Extend genes 
+# # REPLACE WITH A PIPELINE FUNCTION 
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     #helper.extend_genes(genefile,peaksfile,outputfile,int(maxdist),tempdir,verbose,extension_mode,tag = tag)
     if do_orphan:

@@ -4,17 +4,20 @@
 # TODOs:
 - [x] coverage filtering for the peaks  
   - [x] how to filter the peaks? 
-  - [ ] shall we filter before or after the extension - test  
+  - [ ] shall we filter before or after the extension - test
+- [x] solve the problem with non-unique orphan peak naming  
+- [ ] proper input/output parsing   
+- [ ] peak coverage distributions check  
+- [ ] speedup coverage computation? anything faster than bedtools/   
 - [ ] orphan peak linkage via splice junctions if a splice junctions file is provided   
 - [ ] clean temporary directory  
-- [ ] add log file  
-- [ ] solve the problem with non-unique orphan peak naming   
+- [ ] add log file    
 - [ ] make sure cellranger accepts the file with orphan peaks  
-- [ ] to output gtf files for bed inputs  
+- [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
 - [ ] add man orphan peaks  
-- [ ] add output file description  
-- [ ] add reporting 
+- [ ] add description of the output files    
+- [ ] add report 
 - [ ] Reporting:  
   - [ ] coverage around TES metaplot 
   - [ ] estimated intergenic mapping proportion? - count the reads with pysam 
@@ -23,6 +26,7 @@
 1. [Installation](#installation)
 2. [Manual](#Manual)
 3. [Tutorial](#Tutorial)
+4. [FAQs](#faqs)
 
 # Installation  
 
@@ -222,4 +226,18 @@ optional arguments:
                 * new_transcript - creates a new transcript feature with the last exon extended
                 * new exon - creates an extended last exon
   --orphan    NOT IMPLEMENTED! Whether to add orphan peaks
-```
+```  
+
+
+# FAQs  
+
+## I get too many orphan peaks. How should I filter them?   
+
+The results of peak calling depend on the  dataset quality. `GeneExt` allows to select peaks based on the coverage __before__ gene extension.  
+However, as is stated above, having many "orphan" peaks in your annotation __will not affect gene counting__. You can filter the peaks in the downstream analyses by expression.  
+
+
+## Some orphan peaks look like missing genes - how can I link them?   
+
+For the peaks you want to merge, you can manually change the `gene.id` attribute to a common value.  
+

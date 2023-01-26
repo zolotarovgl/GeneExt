@@ -42,6 +42,8 @@ def collect_macs_beds(outdir,outfile,verbose = False):
 
 def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False):
     cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
+    # try samtools instead (should be faster): 
+    #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
     if verbose:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -532,32 +534,10 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     # files with extensions:
     extension_table = temp_dir + '/extensions.tsv'
     extension_bed = temp_dir + '/extensions.bed'
-    
-    # determine input formats
-    # If not format provided, try to guess the format   
-    #if inf:
-    #    infmt = inf
-    #else:
-    #    infmt = get_extension(genefile)
-    #    if not infmt in ['gff','gtf','bed']:
-    #        infmt = guess_format(genefile)
-    #if outf:
-    #    outfmt = outf
-    #else:
-    #    outfmt = get_extension(outfile)
-    #    if not outfmt in ['gff','gtf','bed']:
-    #        raise(ValueError('You need to specify output file format with -ouf option or use an output file name with a proper extension [.gff/.gtf/.bed]'))
-    #if infmt != 'gtf' and outfmt == 'gtf':
-    #    print("I don't know how to convert .gff / .bed files into .gtf yet!\nPlease, for .gtf output, please, use .gtf reference as an input [-g]!")
-    #    quit()
-    #if not infmt in ['gff','gtf','bed']:
-    #    raise(ValueError('Unknown input format!'))
-    #if not outfmt in ['gff','gtf','bed']:
-    #    raise(ValueError('Unknown output format!'))
-    #if verbose:
-    #    print('Input file with genes: %s\nInput file with peaks: %s' % (genefile,peaksfile))
 
-
+    if not outfmt in ['crgtf','gtf']:
+        print("Unknown output format: %s" % outfile)
+        quit()
 
     print('##########################\nLoading the data\n##########################')
     genes = check_ext_read_file(genefile,featuretype = 'gene')
