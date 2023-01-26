@@ -3,24 +3,27 @@
 
 # TODOs:
 - [x] coverage filtering for the peaks  
-  - [x] how to filter the peaks? 
+  - how to filter the peaks? - so far, by coverage  
   - [ ] shall we filter before or after the extension - test
 - [x] solve the problem with non-unique orphan peak naming  
-- [ ] proper input/output parsing   
-- [ ] peak coverage distributions check  
-- [ ] speedup coverage computation? anything faster than bedtools/   
-- [ ] orphan peak linkage via splice junctions if a splice junctions file is provided   
-- [ ] clean temporary directory  
+- [x] proper input/output parsing   
+- [x] peak coverage distributions check  
+   - results are not clear
+- [x] add man orphan peaks  
+- [x] add description of the output files    
+- [ ] speedup coverage computation? 
+  - anything faster than bedtools? (samtools bedcov does something else)
 - [ ] add log file    
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
-- [ ] add man orphan peaks  
-- [ ] add description of the output files    
-- [ ] add report 
+- [ ] add reporting  
 - [ ] Reporting:  
   - [ ] coverage around TES metaplot 
   - [ ] estimated intergenic mapping proportion? - count the reads with pysam 
+- [ ] orphan peak linkage via splice junctions if a splice junctions file is provided   
+
+
 
 # Table of Contents
 1. [Installation](#installation)
