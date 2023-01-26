@@ -9,6 +9,9 @@
 - [ ] clean temporary directory  
 - [ ] to output gtf files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
+- [ ] add man orphan peaks  
+- [ ] add output file description  
+- [ ] add reporting 
 - [ ] Reporting:  
   - [ ] coverage around TES metaplot 
   - [ ] estimated intergenic mapping proportion? - count the reads with pysam 
@@ -117,8 +120,7 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 ### --m Maximal extension length   
 
 `-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
-However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__:  
-!['Missing_gene'](./img/missing_gene.png)
+However, the genome annotation will surely __contain unannotated genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
 
 Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis "What are the orphan peaks?").
 
@@ -135,11 +137,17 @@ Note: in general, it doesn't matter which type of extension you choose - it shou
 
 ### --peakp Filtering peaks based on coverage  
 
-To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage. By default, `GeneExt` will only consider to 25% of the peaks called in the genome.   
+To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage. By default, `GeneExt` will only consider top 25% of the peaks called in the genome (by coverage).   
 
 ### --orphan What are the "orphan peaks"?  
 
-[t.b.a.] 
+The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to long 3'-UTRs or __unannotated genes__: 
+
+!['Missing_gene'](./img/missing_gene.png)
+
+To capture cases like this, `GeneExt` provides an option to keep the peaks that haven't been assigned to any gene ("orphan").  
+__Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting.
+After you obtain a count matrix, you can always filter these peaks based on their size and expression level.    
 
 # Tutorial  
 
@@ -168,9 +176,7 @@ As in previous case, executing with `--orphan`  will result in addition of the u
 
 ## Output files   
 
-
-
-[t.b.a.]
+By default, `GeneExt` will output an annotation file (`-o`) and a temporary directory (`-t`) with intermediate files useful for debugging.  
 
 
 
