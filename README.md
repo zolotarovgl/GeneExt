@@ -17,6 +17,7 @@
 - [x] verbosity 1: simple output; verbosity 2 : a lot of output  
 - [x] filering based on the GENE-OVERLAPPING GENES!
 - [x] filtering by the mean coverage     
+- [ ] __PERFORMANCE VISUAL TESTS!!!__ 
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual        
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   

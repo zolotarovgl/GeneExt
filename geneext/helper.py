@@ -63,7 +63,7 @@ def get_coverage_percentile(inputfile = None,percentile = None, verbose = False)
     if verbose > 0:
                 print('Getting a %s-th percentile ...' % percentile)
     cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
-    if verbose > 0:
+    if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     out = ps.communicate()[0].decode("utf-8").rstrip()
@@ -582,6 +582,11 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     if verbose > 1:
         print('Running:\n\t%s > [output]' % cmd)
     out = os.popen(cmd).read()
+    # write to a file:
+    cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > tmp/_genes_peaks_closest" % (temp_dir,temp_dir)
+    if verbose > 1:
+        print('Running:\n\t%s > [output]' % cmd)
+    os.system(cmd)
 
 
     # Assign genes to the most downstream peaks below extension threshold:
@@ -659,13 +664,13 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
 
 def do_report():
     """This function will take as an input gene extensions and plot the distributions"""
-    raise(NotImplementedError())
+    os.system('Rscript geneext/report.r')
 
 
 # Orphan peaks 
-def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None,tag = None):
+def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None,tag = None,verbose = False):
     tag = 'GE_orphan'
-    """This function should take the input and add the orphan peaks"""
+    """This function takes orphan peaks and appends them to the input file"""
     if not fmt:
         raise(ValueError('Please, specify file format!'))
     if fmt in ['gff','gtf']:
@@ -688,7 +693,8 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
                     file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % gid])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
-        print('%s orphan peaks added' % (str(len(regs))))
+        if verbose > 0:
+            print('%s orphan peaks added' % (str(len(regs))))
 
 
 # get median length of the gene:

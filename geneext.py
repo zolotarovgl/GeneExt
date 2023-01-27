@@ -135,7 +135,7 @@ def run_peakcalling():
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def run_orphan(infmt,outfmt):
+def run_orphan(infmt,outfmt,verbose):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
     # aha, you have to do a second round of outersection but this time also regardless of the strand 
     # to be conservativ
@@ -148,9 +148,9 @@ def run_orphan(infmt,outfmt):
         
         # Now, add the orphan peaks:
         if infmt == 'gtf' and outfmt == 'gtf':
-            helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag)
+            helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
         elif infmt == 'gff' and outfmt == 'gff':
-            helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = 'gff')
+            helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = 'gff',verbose=verbose)
         else:
             print("Don't know how to add orphan peaks!")
     else:
@@ -244,7 +244,8 @@ if __name__ == "__main__":
     print('======== Extending genes =======================')
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     if do_orphan:
-        run_orphan(infmt = infmt,outfmt = outfmt)
+        print('======== Adding orphan peaks ===================')
+        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose)
     if do_report:
         helper.do_report()
     print('======== Done ==================================')
