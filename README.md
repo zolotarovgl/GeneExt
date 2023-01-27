@@ -13,10 +13,10 @@
 - [x] add description of the output files    
 - [x] default max size - gene median length  
 - [x] speedup coverage computation? 
-- [x] .bam file subsampling to a manageable amount of reads
+- [x] .bam file subsampling to a manageable amount of reads  
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual  
-- [ ] verbosity 1: simple output; verbosity 2 : a lot of output   
+- [ ] verbosity 1: simple output; verbosity 2 : a lot of output     
 - [ ] CAVE: you should get percentiles from the PEAKS OVERLAPPING GENES!  
 - [ ] filtering by the mean coverage     
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   

@@ -228,7 +228,7 @@ if __name__ == "__main__":
         #os.system('cp %s %s' % (peaksfilt,peaksfilt + '_tmp'))
 
         # compute coverage for all the peaks:
-        helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = True)
+        helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = True,mean = True)
     
         
         # get the peaks overlapping genes:
@@ -246,7 +246,6 @@ if __name__ == "__main__":
                 print('%s-th coverage percentile for %s is %s reads. Filtering out the peaks below this value...' % (coverage_percentile,genicpeaksfile,str(count_threshold)))
         print('Filtering by coverage ...')
 
-
         # get peaks not overlapping the genes and filter them by coverage
         peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
         peaksfiltcov = peaksfilt.replace('.bed','_fcov.bed')
@@ -254,7 +253,6 @@ if __name__ == "__main__":
         #outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
         helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
         helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
-        quit()
 
     else:
         # Simply remove peaks overlapping genes:

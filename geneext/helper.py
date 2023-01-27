@@ -41,8 +41,14 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     if verbose:
         print('Done collecting beds: %s' % (outfile))
 
-def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False):
-    cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
+def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
+    """Computes bed coverage. If specified, can also compute mean coverage"""
+    if mean:
+        if verbose:
+            print('Computing MEAN coverage!')
+        cmd = 'bedtools coverage -a %s -b %s -s -counts %s > %s' % (inputbed_a,input_bam,"| awk  '{$7=$7/($3-$2);print $0}' | sed  's/ /\\t/g'",outputfile)
+    else:
+        cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
     # try samtools instead (should be faster): 
     #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
     if verbose:
