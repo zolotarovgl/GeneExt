@@ -16,7 +16,6 @@
 - [x] .bam file subsampling to a manageable amount of reads   
 - [ ] add post-extension orphan peak filtering?  
 - [ ] try filtering by the mean coverage  
-  - bug with samtools   
 - [ ] add log file    
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
@@ -130,6 +129,10 @@ STAR --genomeDir $STARIDX --outFilterMultimapNmax 10 --runThreadN $NCPU --readFi
 ```
 
 Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `GeneExt`.  
+
+## BAM subsampling   
+
+If your 10x dataset is too big for `GeneExt` to run in meaninful time, you can subsample the `.bam` file to N reads using an option `--subsamplebam N`. This will significantly speed up the pipeline, but may come at a cost of missing some genes.   
 
 
 ## Important parameters   
