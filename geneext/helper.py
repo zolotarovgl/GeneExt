@@ -9,59 +9,61 @@ import gffutils
 def split_strands(bamfile,outdir,verbose = False,threads = 1):
     """Using samtools, separate input bam file by strands"""
     cmd='samtools view  -@ %s -F 16 %s -b > %s' % (threads,bamfile,outdir + '/plus.bam')
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    print(ps)
+    if verbose > 1:
+        print(ps)
     cmd='samtools view  -@ %s -f 16 %s -b > %s' % (threads,bamfile,outdir + '/minus.bam')
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    if verbose > 1:
+        print(ps)
 
 def run_macs2(bamfile,peaks_prefix,outdir,verbose = False):
     """This function launches MACS2 to call peaks from a .bam file"""
     cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
     try:
-        if verbose:
+        if verbose > 1:
             print('Running:\n%s' % ' '.join(cmd))
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        p.check_returncode()
+        ps = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        ps.check_returncode()
     except subprocess.CalledProcessError as e:
         print ( "\n########## macs2 FAILED ##############\nreturn code: ", e.returncode, "\nOutput: ", e.stderr.decode("utf-8") )
         raise
-    print('macs2 done')
 
 def collect_macs_beds(outdir,outfile,verbose = False):
     """This script collects macs2 output into a single bed file of peaks"""
     cmd = "cat %s/plus_peaks.broadPeak %s/minus_peaks.broadPeak | cut -f 1-6 | awk 'BEGIN{OFS=__\\t__}{if($4~/plus/){$6=__+__}else{$6=__-__};print $0}' | bedtools sort -i - > %s" % (outdir,outdir,outfile)
     cmd = cmd.replace('__','"')
-    if verbose:
+    if verbose > 1 :
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    if verbose:
+    if verbose > 1:
         print('Done collecting beds: %s' % (outfile))
 
 def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
     """Computes bed coverage. If specified, can also compute mean coverage"""
     if mean:
-        if verbose:
+        if verbose > 0:
             print('Computing MEAN coverage!')
         cmd = 'bedtools coverage -a %s -b %s -s -counts %s > %s' % (inputbed_a,input_bam,"| awk  '{$7=$7/($3-$2);print $0}' | sed  's/ /\\t/g'",outputfile)
     else:
         cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
     # try samtools instead (should be faster): 
     #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
     """Given an input bed file with a coverage, get a coverage percentile"""
     percentile = int(percentile)
-    if verbose:
+    if verbose > 0:
                 print('Getting a %s-th percentile ...' % percentile)
     cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
-    if verbose:
+    if verbose > 0:
         print('Running:\n%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     out = ps.communicate()[0].decode("utf-8").rstrip()
@@ -73,11 +75,11 @@ def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbo
     Filter bed file by the last column
     """
     cmd = "awk '$NF>=%s' %s | cut -f 1-7 > %s" % (str(threshold),inputfile,outputfile)
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     # Report how many peaks have been retained:
-    if verbose:
+    if verbose > 1:
         ps = subprocess.Popen('wc -l %s' % outputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         n = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
         ps = subprocess.Popen('wc -l %s' % inputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -91,7 +93,7 @@ def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
     else:
         strand = ''
     cmd = "bedtools intersect -a %s -b %s %s -v > %s" % (inputbed_a,inputbed_b,strand,outputbed)
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         
@@ -109,10 +111,10 @@ def guess_format(filepath,verbose = False):
     with open(filepath) as file:
         head = [next(file).rstrip() for x in range(5)]
     nfields = head[0].count('\t')
-    if verbose:
+    if verbose > 1:
         print('%s fields in file' % nfields)
     if nfields == 8:
-        if verbose:
+        if verbose > 1:
             print('File has 8 fields - .gff/.gtf?')
         if 'ID=' in head[0].split('\t')[8]:
             return('gff')
@@ -120,8 +122,8 @@ def guess_format(filepath,verbose = False):
             return('gtf')
         else:
             raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n%s' % '\n'.join(head)))
-    if nfields == 5:
-        if head[0].count('\t') == 5:
+    if nfields in [6,7]:
+        if head[0].count('\t') in [6,7]:
             return('bed')
     else:
         raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n%s' % '\n'.join(head)))
@@ -187,7 +189,7 @@ def guess_format(filepath,fmt = None,featuretype = None):
             head = next(myfile)
     n_fields = len(head.split('\t'))
     if extension == 'bed':
-        if n_fields == 6:
+        if n_fields in [6,7]:
             return('bed')
         else:
             raise ValueError('Guessed %s extension from %s. Number of fields is wrong (%s).' % (extension,filepath,n_fields))
@@ -326,13 +328,13 @@ class Region:
 
 # GXF helper 
 def gffutils_import_gxf(filepath,verbose = False):
-    print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
+    if verbose > 0:
+        print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
     db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
-    if verbose:
+    if verbose > 1:
         print('###############\nFeatures loaded:')
         for a,b in zip(db.featuretypes(),[db.count_features_of_type(x) for x in db.featuretypes()]):
             print(a + ':' + str(b))
-        print('###############')
     return(db)
 
 def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = False,infmt = None):
@@ -362,7 +364,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
             if n_exons and feature.id in extend_dictionary.keys(): 
-                if verbose:
+                if verbose > 1:
                     print(feature.id)
                     print("%s strand." % db[feature.id].strand)
                     print("%s mRNAs found" % n_transcripts )
@@ -378,14 +380,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     max_end = max([f.end for f in db.children(db[feature.id],featuretype='exon')])
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.end == max_end ][0]
                     last_exon.end = last_exon.end + extend_dictionary[feature.id]
-                    if verbose:
+                    if verbose > 1:
                         print("Gene end chage: %s --> %s; %s" % (str(last_exon.end),str(last_exon.end+extend_dictionary[feature.id]),str(extend_dictionary[feature.id])))
                 elif db[feature.id].strand == '-':
                     feature.start = db[feature.id].start - extend_dictionary[feature.id]
                     max_end = min([f.start for f in db.children(db[feature.id],featuretype='exon')])
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.start == max_end ][0]
                     last_exon.start = last_exon.start - extend_dictionary[feature.id]
-                    if verbose:
+                    if verbose > 1:
                         print("Gene end chage: %s --> %s; %s" % (str(last_exon.start),str(str(last_exon.start-extend_dictionary[feature.id])),str(extend_dictionary[feature.id])))
                 
                 
@@ -395,14 +397,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         raise(ImportError('Missing "Parent" feature for the exon: %s' % last_exon.id))
                     else:
                         mrna_id = last_exon['Parent'][0]
-                    if verbose:
+                    if verbose > 1:
                         print("mRNA with the most downstream exon: %s" % mrna_id)
                 else:
                     if not 'transcript_id' in last_exon.attributes:
                         raise(ImportError('Missing "transcript_id" feature for the exon: %s' % last_exon.id))
                     else:
                         mrna_id = last_exon['transcript_id'][0]
-                    if verbose:
+                    if verbose > 1:
                         print("mRNA with the most downstream exon: %s" % mrna_id)    
                 
                 if extension_mode == 'new_transcript':
@@ -435,7 +437,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
                         ####### Write down the gene and extended mrna ######
                         fout.write(str(mrna)+'\n')
-                        if verbose:
+                        if verbose > 1:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         cnt += 1
                         for child_exon in db.children(mrna_id,featuretype = 'exon'):
@@ -473,7 +475,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
                         ####### Write down the gene and extended mrna ######
                         fout.write(str(mrna)+'\n')
-                        if verbose:
+                        if verbose > 1:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         cnt += 1
                         for child_exon in db.children(mrna_id,featuretype = 'exon'):
@@ -498,7 +500,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     ####### Write down the gene and extended mrna ######
                     fout.write(str(feature)+'\n')
                     fout.write(str(mrna)+'\n')
-                    if verbose:
+                    if verbose > 1:
                         print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                     cnt += 1
                     for child_exon in db.children(mrna_id,featuretype = 'exon'):
@@ -545,12 +547,13 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         print("Unknown output format: %s" % outfile)
         quit()
 
-    print('##########################\nLoading the data\n##########################')
+    if verbose > 1:
+        print('##########################\nLoading the data\n##########################')
     genes = check_ext_read_file(genefile,featuretype = 'gene')
-    if verbose:
+    if verbose > 1:
         print('\t%s genes loaded' % len(genes))
     peaks = check_ext_read_file(peaksfile)
-    if verbose:
+    if verbose > 1:
         print('\t%s peaks loaded' % len(peaks))
     peaks_d = {peak.id:peak for peak in peaks}
     genes_d = {gene.id:gene for gene in genes}
@@ -569,14 +572,14 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
             file.write('\t'.join([gene.chrom,str(gene.start),str(gene.end),gene.id,'0',gene.strand]) + "\n")
     file.close()
 
-    if verbose:
+    if verbose > 1:
         print("Written temporary files:\n\t%s\n\t%s" % (peaks_path,genes_path) )
 
     # use bedtools to identify the closest genes for every peak 
     os.system('bedtools sort -i %s/_peaks_tmp > %s/_peaks_tmp_sorted' % (temp_dir,temp_dir))
     os.system('bedtools sort -i %s/_genes_tmp > %s/_genes_tmp_sorted' % (temp_dir,temp_dir))
     cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
-    if verbose:
+    if verbose > 1:
         print('Running:\n\t%s > [output]' % cmd)
     out = os.popen(cmd).read()
 
@@ -584,14 +587,14 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     # Assign genes to the most downstream peaks below extension threshold:
     peaks2genes = {x.split('\t')[0]:[x.split('\t')[1],int(x.split('\t')[2])] for x in out.split('\n')[:-1]}
     genes2peaks = {gene:[(k,v[1]) for k,v in peaks2genes.items() if gene in v] for gene in set([v[0] for v in peaks2genes.values()])}
-
-    print('##########################\nAsssigning genes to peaks\n##########################')
-    if verbose:
+    if verbose > 1:
+        print('##########################\nAsssigning genes to peaks\n##########################')
+    if verbose > 0:
         print('\t%s peaks assigned to %s genes.' % (len(peaks2genes),len(genes2peaks)))
         print('\tAverage n peaks per gene: %s' % round(np.mean([len(v) for v in genes2peaks.values()]),1))
 
-
-    print('##########################\nGene extension statistics\n##########################')
+    if verbose > 1:
+        print('##########################\nGene extension statistics\n##########################')
     # Select the most downstream peak per gene if not more than threshold 
     # TODO: simplify
     extend = {k:[x for x in v if abs(x[1])<maxdist] for k,v in genes2peaks.items()} 
@@ -601,17 +604,18 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     # this dictionary will be the input to the extension function
     exts = [abs(v[1]) for v in extend.values()]
 
-    if verbose:
-        print('Maximal allowed extension: %s' % maxdist)
+    if verbose > 0:
+        print('\tMaximal allowed extension: %s' % maxdist)
         print('\tMean: %s\n\tMedian: %s\n\tMax: %s' % (round(np.mean(exts),1),round(np.median(exts),1),round(np.max(exts),1)))
     with open(extension_table,'w') as file:
         for k,v in extend.items():
             file.write(k + '\t' + "\t".join([v[0],str(abs(v[1]))]) + '\n')
     file.close()
 
-    if verbose:
+    if verbose > 1:
         print('\tGene extensions have been written to %s' % (extension_table))
-    print('##########################\nWriting output files\n##########################')
+    if verbose > 1:
+        print('##########################\nWriting output files\n##########################')
 
     ############### Finally, extend the genes ###########################
     if (outfmt == 'gtf' or outfmt == 'gff') and infmt == 'bed':
@@ -621,7 +625,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         ###################################################### BUG!!!! ########################
         ####### Writes all the exons - the problem of import #############
         # if bed - simply write the gene ranges 
-        if verbose:
+        if verbose > 1:
             print('\tOutput format - bed')
         with open(outfile,'w') as file:
             for gene in genes:
@@ -637,19 +641,18 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
                 file.write("\t".join([gene.chrom,str(gene.start),str(gene.end),gene.id,str(score),gene.strand])+'\n')
         file.close()
     elif outfmt == 'gff':
-        if verbose:
+        if verbose > 1:
             print('\tOutptut format - gff') 
         db = gffutils_import_gxf(genefile)
-        extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = bool(verbose>1),infmt = infmt )
+        extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = verbose,infmt = infmt )
     elif outfmt == 'gtf':
-        if verbose:
+        if verbose > 1:
             print('\tOutptut format - gff') 
-        print(tag)
         db = gffutils_import_gxf(genefile)
-        extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = bool(verbose>1), infmt = infmt)
+        extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = verbose, infmt = infmt)
     else:
         raise(ValueError('Unknown output format!'))
-    if verbose:
+    if verbose > 1:
         print('\tExtended genes written: %s' % outfile)
 
 # Report functions 
@@ -690,7 +693,6 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
 
 # get median length of the gene:
 def get_median_gene_length(inputfile = None,fmt = None):
-    print(fmt)
     if fmt == 'gtf':
         regs = parse_gtf(inputfile,featuretype = 'gene')
     elif fmt == 'gff':
@@ -705,15 +707,16 @@ def get_median_gene_length(inputfile = None,fmt = None):
 # subsample bam file 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True):
     cmd = "samtools idxstats %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(inputbam),str(nreads))
-    if verbose:
+    if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     frac = ps.communicate()[0].decode("utf-8").rstrip()
     # subsample the bam using samtools view 
     
     cmd = "samtools view -h -b -s %s %s -o %s" % (str(frac),inputbam,outputbam)
-    if verbose:
+    if verbose> 1:
         print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    if verbose:
+    ps.communicate()
+    if verbose > 1:
         print(ps.communicate())
