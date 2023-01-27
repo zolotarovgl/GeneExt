@@ -156,6 +156,14 @@ def run_orphan(infmt,outfmt,verbose):
     else:
         print("Don't know how to add orphan peaks!")
 
+# Reporting functions 
+def generate_report():
+    """This function will take as an input gene extensions and plot the distributions"""
+    # script.R maxdist quant closest_gene_file allpeaks_cov_file allpeaks_noov_file extension_file
+    #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv')
+    os.system('Rscript geneext/report.r %s %s %s %s %s %s %s' % (maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
+
+
 #####################################
 
 if __name__ == "__main__":
@@ -247,7 +255,10 @@ if __name__ == "__main__":
         print('======== Adding orphan peaks ===================')
         run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose)
     if do_report:
-        helper.do_report()
+        print('======== Creating report =======================')
+        generate_report()
+        if verbose > 0:
+            print('Report: report.pdf')
     print('======== Done ==================================')
 
 

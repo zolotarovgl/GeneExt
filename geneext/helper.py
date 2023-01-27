@@ -662,9 +662,6 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
 
 # Report functions 
 
-def do_report():
-    """This function will take as an input gene extensions and plot the distributions"""
-    os.system('Rscript geneext/report.r')
 
 
 # Orphan peaks 

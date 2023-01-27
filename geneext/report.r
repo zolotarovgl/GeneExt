@@ -4,13 +4,32 @@
 # Number the genes with peaks assigned 
 # Gene extension distribution   
 #############################################################
-maxdist = 10000
-quant = .25
-closest_gene_file = 'tmp/_genes_peaks_closest'
-allpeaks_cov_file = 'tmp/allpeaks_coverage.bed'
-allpeaks_noov_file = 'tmp/allpeaks_noov.bed'
-extension_file = 'tmp/extensions.tsv'
 
+
+#maxdist = 10000
+#quant = .25
+#closest_gene_file = 'tmp/_genes_peaks_closest'
+#allpeaks_cov_file = 'tmp/allpeaks_coverage.bed'
+#allpeaks_noov_file = 'tmp/allpeaks_noov.bed'
+#extension_file = 'tmp/extensions.tsv'
+
+
+# script.R maxdist quant closest_gene_file allpeaks_cov_file allpeaks_noov_file extension_file
+args <- commandArgs(trailingOnly = TRUE)
+
+
+#args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv',1)
+maxdist = args[1]
+quant = args[2]
+closest_gene_file = args[3]
+allpeaks_cov_file = args[4]
+allpeaks_noov_file = args[5]
+extension_file = args[6]
+verbosity = as.integer(args[7])
+
+if(verbosity > 0){
+    print(args)
+}
 
 pdf('report.pdf',width = 8.27, height = 11.69 )
 par(mfrow = c(3,2))
@@ -47,7 +66,7 @@ d = read.table(closest_gene_file)
 # plot distances of 3 closest peaks per gene 
 d$V3 = -d$V3
 d = d[d$V2 !='.',]
-dd = lapply(split(d$V3,d$V2),FUN = function(x) sort(x,decreasing = F)[1:min(2,length(x))])
+dd = lapply(split(d$V3,d$V2),FUN = function(x) sort(x,decreasing = F)[1])
 dd = unlist(dd)
 plot(density(dd/1000),main = paste0('Distance to the nearest non-genic peak\nMedian: ',round(median(dd/1000),2),' Kb; Mean: ',round(mean(dd/1000),2),' Kb'),
 xlab = 'Distance to the nearest non-genic peak, Kb')

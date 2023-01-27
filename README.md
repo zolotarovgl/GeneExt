@@ -17,6 +17,8 @@
 - [x] verbosity 1: simple output; verbosity 2 : a lot of output  
 - [x] filering based on the GENE-OVERLAPPING GENES!
 - [x] filtering by the mean coverage     
+- [x] Add reporting:   
+  - [x] distance from the closest peaks  
 - [ ] __PERFORMANCE VISUAL TESTS!!!__ 
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual        
@@ -26,9 +28,7 @@
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
-- [ ] Add reporting:   
-  - [ ] coverage around TES metaplot 
-  - [ ] estimated intergenic mapping proportion? - count the reads with pysam 
+- [ ] estimated intergenic mapping proportion? - count the reads with pysam 
 - [ ] orphan peak linkage:
   - [ ] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
