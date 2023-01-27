@@ -12,7 +12,7 @@ parser.add_argument('-b', default= None,help = 'Input .bam file.')
 parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True)
 parser.add_argument('-p', default= None,help = 'Peaks .bed file. Incompatible with -b.\nIf provided, extension is performed using specified peaks coordinates.\nCan be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.')
 parser.add_argument('-o', default = None, help = 'Output annotation.',required = True)
-parser.add_argument('-m', default = None, help = 'Maximal distance for gene extension. [10000]',required = True)
+parser.add_argument('-m', default = None, help = 'Maximal distance for gene extension. [10000]')
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = str('tmp'), help = 'Temporary directory. [tmp]')
@@ -23,6 +23,7 @@ parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the 
 parser.add_argument('--orphan',action='store_true', help = 'NOT IMPLEMENTED! Whether to add orphan peaks')
 parser.add_argument('--peakp',default = 75, help = 'Coverage threshold (percentile of macs2 peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
 parser.add_argument('--orphanp',default = 75, help = 'Coverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
+parser.add_argument('--subsamplebam',default = None, help = 'NOT IMPPLEMENTED\nIf set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a report.')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
@@ -55,6 +56,7 @@ do_mapping = False
 do_macs2 = False 
 do_report = args.report # add the option!
 do_orphan = args.orphan
+do_subsample = args.subsamplebam
 
 
 #######################################################################
@@ -66,9 +68,9 @@ if outputfile is None:
     print('Please, specify the output file [-o]!')
     error_print()
 
-if maxdist is None:
-    print('Please, specify the maximum length of gene extension [-m]!')
-    error_print()
+#if maxdist is None:
+#    print('Please, specify the maximum length of gene extension [-m]!')
+#    error_print()
 
 if bamfile is not None:
     if os.path.isfile(bamfile):
@@ -151,7 +153,7 @@ def run_orphan(infmt,outfmt):
         # remove orphan peaks overlapping extended regions:  
         genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
         orphan_bed = tempdir + '/' + 'orphan.bed'
-        helper.gxf2bed(infile = outputfile,outfile = genefile_ext_bed)
+        helper.gxf2bed(infile = outputfile,outfile = genefile_ext_bed,featuretype = 'gene')
         helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
         
         # Now, add the orphan peaks:
@@ -181,16 +183,31 @@ if __name__ == "__main__":
     if not infmt in ['bed','gff','gtf']:
         print('Unknown input format!')
         quit()
-    
+
+    # if -m is not set, get a median gene size:
+    if not maxdist:
+        maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
+        if verbose:
+            print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
 
 # 0. MAPPING - not implemented     
     if do_mapping:
         raise(NotImplementedError())
+# 0.1 BAM SUBSAMPLING  
+    do_subsample = True
+    if do_subsample:
+        print('======== Running subsampling ========')
+        subsampled_bam = tempdir + '/subsampled.bam' 
+        nsubs = int(args.subsamplebam)
+        # check here if it's an integer
+        helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs)
+        # now, replace for downstream:
+        bamfile = subsampled_bam
+        # for some reason ,this command isn't getting executed
 # 1. MACS2
     if do_macs2:
-        print('Runnig macs2.')
+        print('======== Runnig macs2 ========')
         peaksfile = tempdir + '/' + 'allpeaks.bed'
-
         helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
         helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
         helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)

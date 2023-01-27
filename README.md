@@ -11,8 +11,12 @@
    - results are not clear
 - [x] add man orphan peaks  
 - [x] add description of the output files    
-- [ ] speedup coverage computation? 
-  - anything faster than bedtools? (samtools bedcov does something else)
+- [x] default max size - gene median length  
+- [x] speedup coverage computation? 
+- [x] .bam file subsampling to a manageable amount of reads   
+- [ ] add post-extension orphan peak filtering?  
+- [ ] try filtering by the mean coverage  
+  - bug with samtools   
 - [ ] add log file    
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
@@ -242,5 +246,5 @@ However, as is stated above, having many "orphan" peaks in your annotation __wil
 
 ## Some orphan peaks look like missing genes - how can I link them?   
 
-For the peaks you want to merge, you can manually change the `gene.id` attribute to a common value.  
+For the peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1').    
 

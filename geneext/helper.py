@@ -8,11 +8,12 @@ import gffutils
 
 def split_strands(bamfile,outdir,verbose = False,threads = 1):
     """Using samtools, separate input bam file by strands"""
-    cmd='samtools view  -@ %s -F 16 %s -Sb > %s' % (threads,bamfile,outdir + '/plus.bam')
+    cmd='samtools view  -@ %s -F 16 %s -b > %s' % (threads,bamfile,outdir + '/plus.bam')
     if verbose:
         print('Running:\n%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    cmd='samtools view  -@ %s -f 16 %s -Sb > %s' % (threads,bamfile,outdir + '/minus.bam')
+    print(ps)
+    cmd='samtools view  -@ %s -f 16 %s -b > %s' % (threads,bamfile,outdir + '/minus.bam')
     if verbose:
         print('Running:\n%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -91,7 +92,6 @@ def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
 # Parse helper
 def gxf2bed(infile,outfile,featuretype = None):
     """This function loads the gff/gtf file and returns a bed file"""
-
     raise(NotImplementedError())
 
 def get_extension(filepath):
@@ -526,8 +526,8 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             else:
                 continue 
 
-def extend_gtf(db,extend_dictionary,output_file,extension_mode = 'new_transcript',tag = None,verbose = False):
-    raise(NotImplementedError('Extension is not yet available for .gtf files!'))
+#def extend_gtf(db,extend_dictionary,output_file,extension_mode = 'new_transcript',tag = None,verbose = False):
+#    raise(NotImplementedError('Extension is not yet available for .gff files!'))
 
 # Gene extension function 
 def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_type,infmt=None,outfmt=None,tag = 'ext'):
@@ -680,3 +680,34 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
                     file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
         print('%s orphan peaks added' % (str(len(regs))))
+
+
+# get median length of the gene:
+def get_median_gene_length(inputfile = None,fmt = None):
+    print(fmt)
+    if fmt == 'gtf':
+        regs = parse_gtf(inputfile,featuretype = 'gene')
+    elif fmt == 'gff':
+        regs = parse_gff(inputfile,featuretype = 'gene')
+    elif fmt == 'bed':
+        regs = parse_bed(inputfile)
+    else:
+        print("Unknown input format!")
+    med = np.median([x.end - x.start for x in regs])
+    return(med)
+
+# subsample bam file 
+def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True):
+    cmd = "samtools idxstats %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(inputbam),str(nreads))
+    if verbose:
+        print('Running:\n%s' % cmd)
+    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    frac = ps.communicate()[0].decode("utf-8").rstrip()
+    # subsample the bam using samtools view 
+    
+    cmd = "samtools view -h -b -s %s %s -o %s" % (str(frac),inputbam,outputbam)
+    if verbose:
+        print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
+    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    if verbose:
+        print(ps.communicate())
