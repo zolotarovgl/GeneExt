@@ -50,7 +50,10 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def filter_by_coverage(inputfile = None,outputfile = None,percentile = None,verbose = False):
-    """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile"""
+    """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile
+    Note: should be also able to filter by the mean coverage.  
+    CAVE: you should get percentiles from the PEAKS OVERLAPPING GENES!
+    """
     if not percentile:
         print('Coverage percentile is not set, retaining all the peaks ...')
         count_threshold = 0 # absolutely arbitrary peak coverage threshold

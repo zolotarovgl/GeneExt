@@ -75,7 +75,7 @@ if outputfile is None:
 if bamfile is not None:
     if os.path.isfile(bamfile):
         do_macs2 = True
-        print('Found a valid alignment file, running macs2 ...')
+        print('Alighment file ... OK')
     else:
         print('Specified alignment file does not exist!')
         error_print()
@@ -97,10 +97,10 @@ if genefile is None:
     error_print()
 
 elif not os.path.isfile(genefile):
-    print('Genome annotation file can not be found!')
+    print('Genome annotation file .... DOES NOT EXIST!')
     error_print()
 else:
-    print('Genome file found.')
+    print('Genome annotation file .... OK')
 
 # set temporary directory:
 if verbose:

@@ -13,9 +13,11 @@
 - [x] add description of the output files    
 - [x] default max size - gene median length  
 - [x] speedup coverage computation? 
-- [x] .bam file subsampling to a manageable amount of reads   
+- [x] .bam file subsampling to a manageable amount of reads
+- [ ] CAVE: you should get percentiles from the PEAKS OVERLAPPING GENES!  
+- [ ] filtering by the mean coverage     
+- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
 - [ ] add post-extension orphan peak filtering?  
-- [ ] try filtering by the mean coverage  
 - [ ] add log file    
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
