@@ -19,8 +19,8 @@ args <- commandArgs(trailingOnly = TRUE)
 
 
 #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv',1)
-maxdist = args[1]
-quant = args[2]
+maxdist = as.integer(args[1])
+quant = as.numeric(args[2])
 closest_gene_file = args[3]
 allpeaks_cov_file = args[4]
 allpeaks_noov_file = args[5]
