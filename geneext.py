@@ -21,8 +21,8 @@ parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--peakp',default = 75, help = 'Coverage threshold (percentile of macs2 peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
-parser.add_argument('--orphanp',default = 75, help = 'Coverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
+parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension. All peaks called with macs2 are required to have a coverage AT LEAST as Nth percentile of the peaks falling within genic regions.')
+#parser.add_argument('--orphanp',default = 25, help = 'NOT IMPLEMENTED!\nCoverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a report.')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
@@ -56,7 +56,7 @@ do_mapping = False
 do_macs2 = False 
 do_report = args.report # add the option!
 do_orphan = args.orphan
-do_subsample = args.subsamplebam
+do_subsample = args.subsamplebam is not None
 
 
 #######################################################################
@@ -133,17 +133,15 @@ def run_peakcalling():
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def outersect_peaks(genefile = None,peaksfile = None,outputbed = None,verbose = None):
-    """Take macs peaks and outersect them with the genome annotation file"""
-    if infmt != 'bed':
-        # convert to bed:
+#def outersect_peaks(genefile = None,peaksfile = None,outputbed = None,verbose = None):
+#"""Take macs peaks and outersect them with the genome annotation file"""
+#    # convert to bed:
 # CAVE! Do you need to convert the input file to bed? 
-        #genefile_bed = tempdir + '/' + 'genes.bed'
-        #helper.gxf2bed(infile = genefile,outfile = genefile_bed)
-        #helper.outersect(inputbed_a = genefile_bed,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
-        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
-    else:
-        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+#    #genefile_bed = tempdir + '/' + 'genes.bed'
+#    #helper.gxf2bed(infile = genefile,outfile = genefile_bed)
+#    #helper.outersect(inputbed_a = genefile_bed,inputbed_b = peaksfile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+#    helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+
 
 def run_orphan(infmt,outfmt):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
@@ -194,7 +192,6 @@ if __name__ == "__main__":
     if do_mapping:
         raise(NotImplementedError())
 # 0.1 BAM SUBSAMPLING  
-    do_subsample = True
     if do_subsample:
         print('======== Running subsampling ========')
         subsampled_bam = tempdir + '/subsampled.bam' 
@@ -203,7 +200,6 @@ if __name__ == "__main__":
         helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs)
         # now, replace for downstream:
         bamfile = subsampled_bam
-        # for some reason ,this command isn't getting executed
 # 1. MACS2
     if do_macs2:
         print('======== Runnig macs2 ========')
@@ -217,21 +213,55 @@ if __name__ == "__main__":
         print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
 
 # 2. Remove peaks overlapping genes:
-    peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
-    print('Removing peaks overlapping genes ... => %s' % peaksfilt)
-    outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
+    #peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
+    #print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+    ##outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
+    #helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
 
 # 3. If used macs to call the peaks, filter the peaks by the coverage:
 # REPLACE WITH A PIPELINE FUNCTION 
     if do_macs2:    
         print('Calculating peak coverage...')
-        covfile = tempdir + '/' + 'allpeaks_noov_coverage.bed'
+        covfile = tempdir + '/' + 'allpeaks_coverage.bed'
         #tmp_peakfile = tempdir + '/' + 'allpeaks_noov.bed_tmp'
         # copy filtered file with peaks
-        os.system('cp %s %s' % (peaksfilt,peaksfilt + '_tmp'))
-        helper.get_coverage(inputbed_a=peaksfilt,input_bam = bamfile,outputfile = covfile,verbose = True)
+        #os.system('cp %s %s' % (peaksfilt,peaksfilt + '_tmp'))
+
+        # compute coverage for all the peaks:
+        helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = True)
+    
+        
+        # get the peaks overlapping genes:
+        print('Getting genic peaks ...')
+        genicpeaksfile = tempdir + '/genic_peaks.bed'
+        helper.outersect(inputbed_a = covfile, inputbed_b = genefile,outputbed=genicpeaksfile,by_strand = True,verbose = verbose)
+        if not coverage_percentile:
+            print('Coverage percentile is not set - retaining all the peaks...')
+            count_threshold = 0
+        else:
+            # get coverage percentile from genic peaks:
+            count_threshold = helper.get_coverage_percentile(inputfile = genicpeaksfile,percentile = coverage_percentile,verbose = verbose)
+            # hell, you also have to replace the column 
+            if verbose:
+                print('%s-th coverage percentile for %s is %s reads. Filtering out the peaks below this value...' % (coverage_percentile,genicpeaksfile,str(count_threshold)))
         print('Filtering by coverage ...')
-        helper.filter_by_coverage(inputfile = covfile,outputfile = peaksfilt,percentile = coverage_percentile,verbose = True)
+
+
+        # get peaks not overlapping the genes and filter them by coverage
+        peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
+        peaksfiltcov = peaksfilt.replace('.bed','_fcov.bed')
+        print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+        #outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
+        helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+        helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
+        quit()
+
+    else:
+        # Simply remove peaks overlapping genes:
+        peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
+        print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+        #outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
+        helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
 
 # 3. Extend genes 
 # # REPLACE WITH A PIPELINE FUNCTION 
@@ -241,3 +271,6 @@ if __name__ == "__main__":
         run_orphan(infmt = infmt,outfmt = outfmt)
     if do_report:
         helper.do_report()
+
+
+# but coverage calculation is only possible if one has alignment data 

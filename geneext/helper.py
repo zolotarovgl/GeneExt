@@ -49,27 +49,24 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-def filter_by_coverage(inputfile = None,outputfile = None,percentile = None,verbose = False):
-    """Given a bedtools coverage result, filter the file by the last column based on either a pre-defined coverage threshold or percentile
-    Note: should be also able to filter by the mean coverage.  
-    CAVE: you should get percentiles from the PEAKS OVERLAPPING GENES!
-    """
-    if not percentile:
-        print('Coverage percentile is not set, retaining all the peaks ...')
-        count_threshold = 0 # absolutely arbitrary peak coverage threshold
-    else:
-        if verbose:
-            print('Getting a %s-th percentile ...' % percentile)
-        cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
-        if verbose:
-            print('Running:\n%s' % cmd)
-        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        out = ps.communicate()[0].decode("utf-8").rstrip()
-        count_threshold = out
-        if verbose:
-            print('%s-th coverage percentile for %s is %s reads. Filtering out the peaks below this value...' % (percentile,inputfile,str(count_threshold)))
+def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
+    """Given an input bed file with a coverage, get a coverage percentile"""
+    percentile = int(percentile)
+    if verbose:
+                print('Getting a %s-th percentile ...' % percentile)
+    cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
+    if verbose:
+        print('Running:\n%s' % cmd)
+    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    out = ps.communicate()[0].decode("utf-8").rstrip()
+    return(out)
 
-    cmd = "awk '$NF>=%s' %s | cut -f 1-6 > %s" % (str(count_threshold),inputfile,outputfile)
+
+def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbose = False):
+    """
+    Filter bed file by the last column
+    """
+    cmd = "awk '$NF>=%s' %s | cut -f 1-7 > %s" % (str(threshold),inputfile,outputfile)
     if verbose:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)

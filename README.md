@@ -14,6 +14,9 @@
 - [x] default max size - gene median length  
 - [x] speedup coverage computation? 
 - [x] .bam file subsampling to a manageable amount of reads
+- [ ] skip peak filtering if not required  
+- [ ] add peak filtering manual  
+- [ ] verbosity 1: simple output; verbosity 2 : a lot of output   
 - [ ] CAVE: you should get percentiles from the PEAKS OVERLAPPING GENES!  
 - [ ] filtering by the mean coverage     
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
@@ -161,7 +164,10 @@ Note: in general, it doesn't matter which type of extension you choose - it shou
 
 ### --peakp Filtering peaks based on coverage  
 
-To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage. By default, `GeneExt` will only consider top 25% of the peaks called in the genome (by coverage).   
+To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage.  
+
+
+__[t.b.a]__ 
 
 ### --orphan What are the "orphan peaks"?  
 
