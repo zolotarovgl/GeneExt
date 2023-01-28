@@ -204,7 +204,7 @@ if __name__ == "__main__":
         subsampled_bam = tempdir + '/subsampled.bam' 
         nsubs = int(args.subsamplebam)
         # check here if it's an integer
-        helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose)
+        helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,nthreads=threads)
         # now, replace for downstream:
         if verbose > 0:
             print('Subsampling done.')
