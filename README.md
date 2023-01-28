@@ -19,6 +19,7 @@
 - [x] filtering by the mean coverage     
 - [x] Add reporting:   
   - [x] distance from the closest peaks  
+- [ ] update the function guessing the extension   
 - [ ] __PERFORMANCE VISUAL TESTS!!!__ 
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual        

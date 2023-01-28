@@ -27,7 +27,7 @@ allpeaks_noov_file = args[5]
 extension_file = args[6]
 verbosity = as.integer(args[7])
 
-if(verbosity > 0){
+if(verbosity > 1){
     print(args)
 }
 
@@ -41,6 +41,12 @@ al = cov$V7
 nov = covn$V7
 ov = cov$V7[!cov$V4 %in% covn$V4] 
 
+# closest upstream genes per peak 
+clo = read.table(closest_gene_file)
+clo$V3 = -clo$V3
+clo = clo[clo$V2 !='.',]
+
+
 
 ############## Numerical summary ##################
 library(stringr)
@@ -52,24 +58,27 @@ n_peaks_noov = length(nov)
 e = read.table(extension_file)
 n_ext = length(unique(e$V1))
 
+# after considering threshold:
+f = clo[clo$V3<=maxdist,]
+peaks_below_threshold = length(unique(f$V1))
+genes_below_threshold = length(unique(f$V2))
+mean_peaks_per_gene_below_threshold = round(mean(sapply(split(f$V1,f$V2),length)),1)
+
 plot.new()
-txt = sprintf('Number of peaks: %s\nNumber of peaks in genes: %s\nNumber of peaks outside of genes: %s\nN genes extended: %s',
-n_peaks,n_peaks_in_genes,n_peaks_noov,n_ext)
-text(x=0.1, y=0.9, txt,pos = 4,cex = 1)  # first 2 numbers are xy-coordinates within [0, 1]
+txt = sprintf('Number of peaks: %s\nNumber of peaks in genes: %s\nNumber of peaks outside of genes: %s\n-----After filtering (max %s bp)-----:\nN genes: %s\nN peaks: %s\nMean N peaks per gene: %s\nN genes extended: %s',
+n_peaks,n_peaks_in_genes,n_peaks_noov,maxdist,genes_below_threshold,peaks_below_threshold,mean_peaks_per_gene_below_threshold,n_ext)
+text(x=0.1, y=0.5, txt,pos = 4,cex = 1)  # first 2 numbers are xy-coordinates within [0, 1]
 
 
-# Gene extension density plot
-plot(density(e$V3),main = 'Gene extension',xlab = 'Distance from TES, bp')
 ######## Distance distributions ############
-d = read.table(closest_gene_file)
 #d = tapply(d$V2,d$V3,max)
 # plot distances of 3 closest peaks per gene 
-d$V3 = -d$V3
-d = d[d$V2 !='.',]
-dd = lapply(split(d$V3,d$V2),FUN = function(x) sort(x,decreasing = F)[1])
+thr = 50000 # cut distribution here
+dd = lapply(split(clo$V3,clo$V2),FUN = function(x) sort(x,decreasing = F)[1])
 dd = unlist(dd)
+dd = dd[dd<=thr]
 plot(density(dd/1000),main = paste0('Distance to the nearest non-genic peak\nMedian: ',round(median(dd/1000),2),' Kb; Mean: ',round(mean(dd/1000),2),' Kb'),
-xlab = 'Distance to the nearest non-genic peak, Kb')
+xlab = sprintf('Distance to the nearest non-genic peak, Kb ( cut at %s Kb)',thr/1000))
 abline(v = maxdist/1000,lty = 2,lwd =2,col = 'red')
 
 ########### Peak coverage plots ################
@@ -103,8 +112,12 @@ lines(density(log10(ov)),col = 'blue')
 legend(x = 2,y = 0.8,fill = c('black','red','blue'),legend = c('All peaks','Not overlapping genes','Overlapping genes'),cex = 1)
 cutoff = quantile(log10(ov),quant)
 abline(v = cutoff,lty = 2,col = 'red')
+
+# Gene extension density plot
+plot(density(e$V3),main = 'Gene extension length',xlab = 'Distance from TES, bp')
+
 garbage <- dev.off()
 #####################################################
 
-# Report numerical values:
-par(mfrow = c(3,2))
+# number of peaks assigned to gene below extension threshold:
+closest_gene_file

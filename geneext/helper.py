@@ -337,7 +337,7 @@ def gffutils_import_gxf(filepath,verbose = False):
             print(a + ':' + str(b))
     return(db)
 
-def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = False,infmt = None):
+def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = False,infmt = None,outfmt = None):
     """ This function will extend .gff file by either adding new mRNA or by extending the last exon\n
     extension_type - the way in which to handle .gff/.gtf file
         - new_transcript - creates new fake mRNA with the last exon extended to match the peak 
@@ -624,7 +624,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
 
     ############### Finally, extend the genes ###########################
     if (outfmt == 'gtf' or outfmt == 'gff') and infmt == 'bed':
-        raise(ValueError('Can not output .%s file for input in .%s format!' % (outfmt,infmt)))
+        raise(NotImplementedError('Can not output .%s file for input in .%s format!' % (outfmt,infmt)))
     elif outfmt == 'bed':
 
         ###################################################### BUG!!!! ########################
