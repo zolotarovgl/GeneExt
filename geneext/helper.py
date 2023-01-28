@@ -705,7 +705,7 @@ def get_median_gene_length(inputfile = None,fmt = None):
     return(med)
 
 # subsample bam file 
-def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,nthreads = '1'):
+def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     cmd = "samtools idxstats %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(inputbam),str(nreads))
     if verbose > 1:
         print('Running:\n%s' % cmd)
@@ -713,7 +713,7 @@ def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,
     frac = ps.communicate()[0].decode("utf-8").rstrip()
     # subsample the bam using samtools view 
     
-    cmd = "samtools view -@ %s -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
+    cmd = "samtools view -@ %s -h -b -s %s %s -o %s" % (str(nthreads),str(frac),inputbam,outputbam)
     if verbose> 1:
         print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
