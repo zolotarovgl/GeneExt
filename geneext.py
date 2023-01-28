@@ -61,7 +61,8 @@ do_report = args.report # add the option!
 do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate
-
+do_clean = True
+do_orphan_merge = False  
 
 #######################################################################
 if peaksfile is None and bamfile is None:
@@ -137,7 +138,7 @@ def run_peakcalling():
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def run_orphan(infmt,outfmt,verbose):
+def run_orphan(infmt,outfmt,verbose,merge = False):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
     # aha, you have to do a second round of outersection but this time also regardless of the strand 
     # to be conservativ
@@ -166,7 +167,15 @@ def generate_report():
     os.system('Rscript geneext/report.r %s %s %s %s %s %s %s' % (maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
 
 def get_mapping_estimate(alignmentfile = None,generangesfile = None):
-    raise(NotImplementedError)
+    raise(NotImplementedError())
+
+def clean_tmp(tempdir = None):
+    # clean temporary directory of big files 
+    toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or x[0] == '_']
+    for file in toremove:
+        if verbose > 0:
+            print("Removing %s" % file)
+        os.remove(file)
 
 #####################################
 
@@ -257,7 +266,7 @@ if __name__ == "__main__":
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     if do_orphan:
         print('======== Adding orphan peaks ===================')
-        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose)
+        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_merge)
     if do_report:
         print('======== Creating report =======================')
         generate_report()
@@ -266,6 +275,9 @@ if __name__ == "__main__":
     if do_estimate:
         print('======== Estimating intergenic mapping =========')
         get_mapping_estimate(alignmentfile = bamfile,generangesfile = outputfile)
+    if do_clean:
+        print('======== Cleaning temporary directory ==========')
+        clean_tmp(tempdir = tempdir)
     print('======== Done ==================================')
 
 

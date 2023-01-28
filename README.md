@@ -20,13 +20,16 @@
   - [x] distance from the closest peaks  
 - [x] update the function guessing the extension  
 - [x] input gff -> output gtf   
+- [x] remove big temporary if `--clean` is set  
+- [ ] helper.add_orphan should be split into getting the orphan peaks and adding them to allow for peak merging 
+- [ ] add log file  
+- [ ] running subssampling takes a long time 
 - [ ] __check extension modes__  
 - [ ] __check performance__   
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual        
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
-- [ ] add post-extension orphan peak filtering?  
-- [ ] add log file    
+- [ ] add post-extension orphan peak filtering?      
 - [ ] make sure cellranger accepts the file with orphan peaks  
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
@@ -259,6 +262,14 @@ optional arguments:
 
 
 # FAQs  
+
+## GeneExt taks too long to run. How can I speed it up?  
+
+1. `.bam` subsampling.  
+  By default, `GeneExt` will use the whole dataset to call the peaks. This may be computationally costly for big datasets.  
+  You can use `--subsamplebam 10000000` to randomly sample 10M reads (or any other amount).   
+
+ 
 
 ## I get too many orphan peaks. How should I filter them?   
 

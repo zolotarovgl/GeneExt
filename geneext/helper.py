@@ -601,7 +601,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         print('Running:\n\t%s > [output]' % cmd)
     out = os.popen(cmd).read()
     # write to a file:
-    cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > tmp/_genes_peaks_closest" % (temp_dir,temp_dir)
+    cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > %s/_genes_peaks_closest" % (temp_dir,temp_dir,temp_dir)
     if verbose > 1:
         print('Running:\n\t%s > [output]' % cmd)
     os.system(cmd)
@@ -660,8 +660,6 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         print('\tExtended genes written: %s' % outfile)
 
 # Report functions 
-
-
 
 # Orphan peaks 
 def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None,tag = None,verbose = False):
