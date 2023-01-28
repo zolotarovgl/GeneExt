@@ -717,6 +717,7 @@ def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,
     if verbose> 1:
         print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    ps.communicate()
     if verbose > 1:
         print(ps.communicate())
+    else:
+        ps.communicate()
