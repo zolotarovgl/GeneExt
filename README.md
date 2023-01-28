@@ -4,7 +4,6 @@
 # TODOs:
 - [x] coverage filtering for the peaks  
   - how to filter the peaks? - so far, by coverage  
-  - [ ] shall we filter before or after the extension - test
 - [x] solve the problem with non-unique orphan peak naming  
 - [x] proper input/output parsing   
 - [x] peak coverage distributions check  
@@ -19,8 +18,10 @@
 - [x] filtering by the mean coverage     
 - [x] Add reporting:   
   - [x] distance from the closest peaks  
-- [ ] update the function guessing the extension   
-- [ ] __PERFORMANCE VISUAL TESTS!!!__ 
+- [x] update the function guessing the extension  
+- [x] input gff -> output gtf   
+- [ ] __check extension modes__  
+- [ ] __check performance__   
 - [ ] skip peak filtering if not required  
 - [ ] add peak filtering manual        
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
@@ -210,6 +211,13 @@ As in previous case, executing with `--orphan`  will result in addition of the u
 ## Output files   
 
 By default, `GeneExt` will output an annotation file (`-o`) and a temporary directory (`-t`) with intermediate files useful for debugging.  
+
+## Understanding the report   
+
+Report PDF file provides some basic information about the distributions in the data.   
+By far, the most important plot is the distribution of the distances to the closest peak ("Distance to the nearest non−genic peak").  
+A peak in this distribution provides an estimate of a general length of missing 3' ends across the whole genome.  
+You can compare this distribution with the distribution of introduced gene extensions to see whether it makes sense to decrease a maximum allowed extension per gene.   
 
 
 

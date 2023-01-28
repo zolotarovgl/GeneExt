@@ -8,10 +8,10 @@ import re
 
 
 parser = argparse.ArgumentParser(description="Extend genes in 3' direction using single-cell RNA-seq data",formatter_class=RawTextHelpFormatter)
+parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True) 
 parser.add_argument('-b', default= None,help = 'Input .bam file.')
-parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True)
-parser.add_argument('-p', default= None,help = 'Peaks .bed file. Incompatible with -b.\nIf provided, extension is performed using specified peaks coordinates.\nCan be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.')
-parser.add_argument('-o', default = None, help = 'Output annotation.',required = True)
+parser.add_argument('-p', default= None,help = 'Peaks .bed file. Incompatible with -b.\nIf provided, extension is performed using specified peaks coordinates.\nCan be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.') 
+parser.add_argument('-o', default = None, help = 'Output annotation.\n\n\n================ Additional arguments ================\n',required = True)
 parser.add_argument('-m', default = None, help = 'Maximal distance for gene extension.\nIf not set, a median length of gene (genomic span!) is used.')
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
@@ -25,7 +25,8 @@ parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to u
 parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
 #parser.add_argument('--orphanp',default = 25, help = 'NOT IMPLEMENTED!\nCoverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
-parser.add_argument('--report', action='store_true', help = 'Use this option to generate a report.')
+parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
+parser.add_argument('--estimate', action='store_true', help = 'NOT IMPLEMENTED\nWhether to estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
 #parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
 
@@ -59,6 +60,7 @@ do_macs2 = False
 do_report = args.report # add the option!
 do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
+do_estimate = args.estimate
 
 
 #######################################################################
@@ -163,6 +165,8 @@ def generate_report():
     #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv')
     os.system('Rscript geneext/report.r %s %s %s %s %s %s %s' % (maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
 
+def get_mapping_estimate(alignmentfile = None,generangesfile = None):
+    raise(NotImplementedError)
 
 #####################################
 
@@ -259,6 +263,9 @@ if __name__ == "__main__":
         generate_report()
         if verbose > 0:
             print('Report: report.pdf')
+    if do_estimate:
+        print('======== Estimating intergenic mapping =========')
+        get_mapping_estimate(alignmentfile = bamfile,generangesfile = outputfile)
     print('======== Done ==================================')
 
 

@@ -644,24 +644,6 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         raise(NotImplementedError('Can not output .%s file for input in .%s format!' % (outfmt,infmt)))
     elif outfmt == 'bed':
         raise(NotImplementedError())
-        ###################################################### BUG!!!! ########################
-        ####### Writes all the exons - the problem of import #############
-        ## if bed - simply write the gene ranges 
-        #if verbose > 1:
-        #    print('\tOutput format - bed')
-        #with open(outfile,'w') as file:
-        #    for gene in genes:
-        #        if gene.id in extend.keys():
-        #            ext = abs(extend[gene.id][1])
-        #            if gene.strand == '+':
-        #                gene.end + gene.end + ext
-        #            elif gene.strand == '-':
-        #                gene.start = gene.start - ext
-        #            score = ext
-        #        else:
-        #            score = 0
-        #        file.write("\t".join([gene.chrom,str(gene.start),str(gene.end),gene.id,str(score),gene.strand])+'\n')
-        #file.close()
     elif outfmt == 'gff':
         if verbose > 1:
             print('\tOutptut format - gff') 
