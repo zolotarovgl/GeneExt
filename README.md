@@ -21,9 +21,8 @@
 - [x] update the function guessing the extension  
 - [x] input gff -> output gtf   
 - [x] remove big temporary if `--clean` is set  
-- [ ] helper.add_orphan should be split into getting the orphan peaks and adding them to allow for peak merging 
+- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging 
 - [ ] add log file  
-- [ ] running subssampling takes a long time 
 - [ ] __check extension modes__  
 - [ ] __check performance__   
 - [ ] skip peak filtering if not required  
@@ -263,11 +262,12 @@ optional arguments:
 
 # FAQs  
 
-## GeneExt taks too long to run. How can I speed it up?  
+## GeneExt takes ages to run. How can I speed it up?  
 
-1. `.bam` subsampling.  
-  By default, `GeneExt` will use the whole dataset to call the peaks. This may be computationally costly for big datasets.  
-  You can use `--subsamplebam 10000000` to randomly sample 10M reads (or any other amount).   
+1. `.bam` subsampling:    
+  By default, `GeneExt` will use the whole dataset to call the peaks. This may be computationally costly for big datasets (>50M reads). You can use `--subsamplebam 10000000` to randomly sample 10M reads (or any other amount). Keep in mind, __using more data is always better.__  
+2. Parallelization:  
+  You can split your genome into individual chromosomes / contigs and run `GeneExt` on each of them separately  
 
  
 
@@ -279,5 +279,5 @@ However, as is stated above, having many "orphan" peaks in your annotation __wil
 
 ## Some orphan peaks look like missing genes - how can I link them?   
 
-For the peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1').    
+For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1').    
 
