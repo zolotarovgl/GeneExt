@@ -119,5 +119,3 @@ plot(density(e$V3),main = 'Gene extension length',xlab = 'Distance from TES, bp'
 garbage <- dev.off()
 #####################################################
 
-# number of peaks assigned to gene below extension threshold:
-closest_gene_file

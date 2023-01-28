@@ -108,25 +108,31 @@ def get_extension(filepath):
 
 def guess_format(filepath,verbose = False):
     """Guess file exension from a header"""
+    #with open(filepath) as file:
+    #    head = [next(file).rstrip() for x in range(5)]
     with open(filepath) as file:
-        head = [next(file).rstrip() for x in range(5)]
-    nfields = head[0].count('\t')
+        head = next(file).rstrip()
+        firstchar = head[0]
+        while firstchar == '#':
+            head = next(file).rstrip()
+            firstchar = head[0]
+    file.close()
+    nfields = head.count('\t')
     if verbose > 1:
         print('%s fields in file' % nfields)
     if nfields == 8:
         if verbose > 1:
             print('File has 8 fields - .gff/.gtf?')
-        if 'ID=' in head[0].split('\t')[8]:
+        if 'ID=' in head.split('\t')[8]:
             return('gff')
-        elif '_id "' in head[0].split('\t')[8]:
+        elif '_id "' in head.split('\t')[8]:
             return('gtf')
         else:
-            raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n%s' % '\n'.join(head)))
-    if nfields in [6,7]:
-        if head[0].count('\t') in [6,7]:
-            return('bed')
+            raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n\n%s\n\n' % head))
+    elif nfields in [6,7]:
+        return('bed')
     else:
-        raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n%s' % '\n'.join(head)))
+        raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n\n%s\n\n' % head))
 
 def parse_bed(infile):
     with open(infile) as file:
@@ -174,7 +180,7 @@ def parse_gtf(infile,featuretype = None):
     return(regs)
 
 
-def guess_format(filepath,fmt = None,featuretype = None):
+def _guess_format(filepath,fmt = None,featuretype = None):
     """Guess file extension"""
     if not fmt:
         # get extension from file name:
@@ -332,7 +338,7 @@ def gffutils_import_gxf(filepath,verbose = False):
         print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
     db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
     if verbose > 1:
-        print('###############\nFeatures loaded:')
+        print('======== Features loaded: ======================')
         for a,b in zip(db.featuretypes(),[db.count_features_of_type(x) for x in db.featuretypes()]):
             print(a + ':' + str(b))
     return(db)
@@ -360,18 +366,19 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             elif infmt == 'gtf':
                 if not 'gene_id' in feature.attributes:
                     print(feature)
-                    exit("no gene_id attribute found for gene %s! ( see the feature line above)" % feature.id)     
+                    exit("no gene_id attribute found for gene %s! ( see the feature line above)" % feature.id)    
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
             if n_exons and feature.id in extend_dictionary.keys(): 
                 if verbose > 1:
                     print(feature.id)
                     print("%s strand." % db[feature.id].strand)
-                    print("%s mRNAs found" % n_transcripts )
+                    print("%s transcripts found" % n_transcripts )
                     print("%s exons found" % n_exons)
                     print('Find mRNA with the most downstream exon ...')
                     if n_exons == 0 or n_transcripts == 0:
-                        print('No exons or transcripts found in the file! - contact Grisha!')
+                        print('No exons or transcripts found in the file!\nFeature types found in the annotation file:\n')
+                        print('\n'.join([x for x in db.featuretypes()]))
                         quit()
                 if db[feature.id].strand == '+':
                     # update gene bound:
@@ -411,12 +418,15 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     if infmt == 'gff':
                         ###### Create fictional mRNA ########
                         # change last_exon id 
-                        last_exon['ID'] = [tag + '~lastexon_'+last_exon['ID'][0]]
-                        # now, change the parent
-                        last_exon['Parent'] = [tag + '~'+mrna_id]
-                        # duplicate last exon, change the metadata:
-                        last_exon.source = last_exon.source + '~' + tag
-                        last_exon['three_prime_ext'] = str(extend_dictionary[feature.id])
+                        if outfmt == 'gff':
+                            last_exon['ID'] = [tag + '~lastexon_'+last_exon['ID'][0]]
+                            # now, change the parent
+                            last_exon['Parent'] = [tag + '~'+mrna_id]
+                            # duplicate last exon, change the metadata:
+                            last_exon.source = last_exon.source + '~' + tag
+                            last_exon['three_prime_ext'] = str(extend_dictionary[feature.id])
+                        elif outfmt == 'gtf':
+                            raise(NotImplementedError('gff-> gtf'))
                         # CAVE: mrna ranges should be also updated
                         mrna = db[mrna_id]
                         mrna['three_prime_ext'] = str(extend_dictionary[feature.id])
@@ -548,15 +558,23 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         quit()
 
     if verbose > 1:
-        print('##########################\nLoading the data\n##########################')
-    genes = check_ext_read_file(genefile,featuretype = 'gene')
+        print('======== Gene extension: Loading annotations ===')
+    #genes = check_ext_read_file(genefile,featuretype = 'gene')
+    if infmt == 'bed':
+        genes = parse_bed(genefile)
+    elif infmt == 'gff':
+        genes = parse_gff(genefile,'gene')
+    else:
+        genes = parse_gtf(genefile,'featuretype')
+
     if verbose > 1:
         print('\t%s genes loaded' % len(genes))
-    peaks = check_ext_read_file(peaksfile)
+    peaks = parse_bed(peaksfile)
+
     if verbose > 1:
         print('\t%s peaks loaded' % len(peaks))
-    peaks_d = {peak.id:peak for peak in peaks}
-    genes_d = {gene.id:gene for gene in genes}
+    #peaks_d = {peak.id:peak for peak in peaks}
+    #genes_d = {gene.id:gene for gene in genes}
 
     ####################### Assign peaks to genes, determine how much to extend #################################
     peaks_path = '%s/%s' % (temp_dir,'_peaks_tmp')
@@ -593,13 +611,13 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     peaks2genes = {x.split('\t')[0]:[x.split('\t')[1],int(x.split('\t')[2])] for x in out.split('\n')[:-1]}
     genes2peaks = {gene:[(k,v[1]) for k,v in peaks2genes.items() if gene in v] for gene in set([v[0] for v in peaks2genes.values()])}
     if verbose > 1:
-        print('##########################\nAsssigning genes to peaks\n##########################')
+        print('======== Asssigning genes to peaks =============')
     if verbose > 0:
         print('\t%s peaks assigned to %s genes.' % (len(peaks2genes),len(genes2peaks)))
         print('\tAverage n peaks per gene: %s' % round(np.mean([len(v) for v in genes2peaks.values()]),1))
 
     if verbose > 1:
-        print('##########################\nGene extension statistics\n##########################')
+        print('======== Gene extension statistics =============')
     # Select the most downstream peak per gene if not more than threshold 
     # TODO: simplify
     extend = {k:[x for x in v if abs(x[1])<maxdist] for k,v in genes2peaks.items()} 
@@ -608,7 +626,6 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     extend_dictionary = {k:abs(v[1]) for k,v in extend.items()}
     # this dictionary will be the input to the extension function
     exts = [abs(v[1]) for v in extend.values()]
-
     if verbose > 0:
         print('\tMaximal allowed extension: %s' % maxdist)
         print('\tMean: %s\n\tMedian: %s\n\tMax: %s' % (round(np.mean(exts),1),round(np.median(exts),1),round(np.max(exts),1)))
@@ -620,31 +637,31 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     if verbose > 1:
         print('\tGene extensions have been written to %s' % (extension_table))
     if verbose > 1:
-        print('##########################\nWriting output files\n##########################')
+        print('======== Writing output files ==================')
 
     ############### Finally, extend the genes ###########################
     if (outfmt == 'gtf' or outfmt == 'gff') and infmt == 'bed':
         raise(NotImplementedError('Can not output .%s file for input in .%s format!' % (outfmt,infmt)))
     elif outfmt == 'bed':
-
+        raise(NotImplementedError())
         ###################################################### BUG!!!! ########################
         ####### Writes all the exons - the problem of import #############
-        # if bed - simply write the gene ranges 
-        if verbose > 1:
-            print('\tOutput format - bed')
-        with open(outfile,'w') as file:
-            for gene in genes:
-                if gene.id in extend.keys():
-                    ext = abs(extend[gene.id][1])
-                    if gene.strand == '+':
-                        gene.end + gene.end + ext
-                    elif gene.strand == '-':
-                        gene.start = gene.start - ext
-                    score = ext
-                else:
-                    score = 0
-                file.write("\t".join([gene.chrom,str(gene.start),str(gene.end),gene.id,str(score),gene.strand])+'\n')
-        file.close()
+        ## if bed - simply write the gene ranges 
+        #if verbose > 1:
+        #    print('\tOutput format - bed')
+        #with open(outfile,'w') as file:
+        #    for gene in genes:
+        #        if gene.id in extend.keys():
+        #            ext = abs(extend[gene.id][1])
+        #            if gene.strand == '+':
+        #                gene.end + gene.end + ext
+        #            elif gene.strand == '-':
+        #                gene.start = gene.start - ext
+        #            score = ext
+        #        else:
+        #            score = 0
+        #        file.write("\t".join([gene.chrom,str(gene.start),str(gene.end),gene.id,str(score),gene.strand])+'\n')
+        #file.close()
     elif outfmt == 'gff':
         if verbose > 1:
             print('\tOutptut format - gff') 
@@ -652,7 +669,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = verbose,infmt = infmt )
     elif outfmt == 'gtf':
         if verbose > 1:
-            print('\tOutptut format - gff') 
+            print('\tOutptut format - gtf') 
         db = gffutils_import_gxf(genefile)
         extend_gff(db,extend_dictionary,outfile,extension_mode = extension_type,tag = tag,verbose = verbose, infmt = infmt)
     else:
