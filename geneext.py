@@ -7,7 +7,7 @@ import subprocess
 import re
 
 
-parser = argparse.ArgumentParser(description="Extend genes in 3' direction using single-cell RNA-seq data",formatter_class=RawTextHelpFormatter)
+parser = argparse.ArgumentParser(description="Program: GeneExt (Extend genes in 3' direction using single-cell RNA-seq data)\nVersion: 0.7",formatter_class=RawTextHelpFormatter)
 parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True) 
 parser.add_argument('-b', default= None,help = 'Input .bam file.')
 parser.add_argument('-p', default= None,help = 'Peaks .bed file. Incompatible with -b.\nIf provided, extension is performed using specified peaks coordinates.\nCan be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.') 
