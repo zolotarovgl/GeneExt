@@ -56,13 +56,14 @@ def error_print():
 
 # pipeline settings:
 do_mapping = False
-do_macs2 = False 
-do_report = args.report # add the option!
+do_macs2 = False  
 do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate
 do_clean = not args.keep
 do_orphan_merge = False  
+
+
 
 #######################################################################
 if peaksfile is None and bamfile is None:
@@ -114,6 +115,8 @@ if not os.path.exists(tempdir):
    os.makedirs(tempdir)
    if verbose > 0:
         print('Directory created: %s' % tempdir)
+
+do_report = args.report and do_macs2
 
 ########### Functions ################
 ######################################

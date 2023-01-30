@@ -156,7 +156,10 @@ def parse_gff(infile,featuretype = None):
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gff_get_ID(str(x[8])),strand = str(x[6])) for x in lines]
             else:
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gff_get_ID(str(x[8])),strand = str(x[6])) for x in lines if x[2] == featuretype]
-    return(regs)
+    if len(regs) == 0:
+        raise(ValueError('No %s found in file %s!' % (featuretype if featuretype else 'lines',infile)))
+    else:
+        return(regs)
 
 
 def parse_gtf(infile,featuretype = None):
@@ -177,7 +180,10 @@ def parse_gtf(infile,featuretype = None):
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6])) for x in lines]
             else:
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6])) for x in lines if x[2]==featuretype]
-    return(regs)
+    if len(regs) == 0:
+        raise(ValueError('No %s found in file %s!' % (featuretype if featuretype else 'lines',infile)))
+    else:
+        return(regs)
 
 
 def _guess_format(filepath,fmt = None,featuretype = None):
@@ -504,7 +510,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         cnt += 1
                     
                     elif infmt == 'gtf':
-                        raise(NotImplementedError())
+
                         ###### Create fictional mRNA ########
                         # now, change the parent transcript
                         last_exon['transcript_id'] = [tag + '~'+mrna_id]
@@ -658,7 +664,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         print('\t%s peaks loaded' % len(peaks))
     
     if len(genes) == 0:
-        print('No genes loaded! Check your annotation file!')
+        print('No genes loaded! Please, make sure your .gff/gtf. file contains "gene" features!')
         quit()
     #peaks_d = {peak.id:peak for peak in peaks}
     #genes_d = {gene.id:gene for gene in genes}

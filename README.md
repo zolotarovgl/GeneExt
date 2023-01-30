@@ -1,45 +1,6 @@
 !['header'](./img/top.png)
 # GeneExt - Gene extension for improved single-cell RNA-seq data counting   
 
-# TODOs:
-- [x] coverage filtering for the peaks  
-  - how to filter the peaks? - so far, by coverage  
-- [x] solve the problem with non-unique orphan peak naming  
-- [x] proper input/output parsing   
-- [x] peak coverage distributions check  
-   - results are not clear
-- [x] add man orphan peaks  
-- [x] add description of the output files    
-- [x] default max size - gene median length  
-- [x] speedup coverage computation? 
-- [x] .bam file subsampling to a manageable amount of reads 
-- [x] verbosity 1: simple output; verbosity 2 : a lot of output  
-- [x] filering based on the GENE-OVERLAPPING GENES!
-- [x] filtering by the mean coverage     
-- [x] Add reporting:   
-  - [x] distance from the closest peaks  
-- [x] update the function guessing the extension     
-- [x] remove big temporary if `--clean` is set  
-- [ ] __input gff -> output gtf__  
-- [ ] fix report path error when called outside of the directory   
-- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging 
-- [ ] add log file  
-- [ ] __check extension modes__  
-- [ ] __check performance__   
-- [ ] skip peak filtering if not required  
-- [ ] add peak filtering manual        
-- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
-- [ ] add post-extension orphan peak filtering?      
-- [ ] make sure cellranger accepts the file with orphan peaks  
-- [ ] to output `crgtf` files for bed inputs  
-- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
-- [ ] estimated intergenic mapping proportion? - count the reads with pysam 
-- [ ] orphan peak linkage:
-  - [ ] simple distance merging     
-  - [ ] splice junctions if a splice junctions file is provided  
-
-
-
 # Table of Contents
 1. [Installation](#installation)
 2. [Manual](#Manual)
@@ -93,24 +54,46 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 
 ## Input & Output   
 
-> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
->
-> Anna Karenina principle for genome annotation files
-
 To run `GeneExt`, you will need the following:  
 
 1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis "Where do I get my .bam file?")  
 2. Genome annotation in the `bed`, `gff` or `gtf` formats  
 
-Note: in a `bed` file, only gene ranges should be present.   
+Note 1: in a `bed` file, only gene ranges should be present.  
+Note 2: if using `.gff/.gtf` file, make sure there are "gene" features defined!  
 
 `GeneExt` accepts following annotion input formats and converts them to the output:   
-* `bed` &rarr; `crgtf`   
-* `gff` &rarr; `crgtf`,`gtf`  
-* `gtf` &rarr; `crgtf`,`gtf`  
+* `bed` &rarr; `crgtf`   __NOT IMPLEMENTED__
+* `gff` &rarr; `gtf`  
+* `gtf` &rarr; `gtf`  
 
-In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible ( see [Input debugging](#input-debugging)).  
-For such cases, it is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
+In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible.   
+
+# Input debugging  
+
+> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
+>
+> Anna Karenina principle for genome annotation files
+
+By far the most probable reason for `GeneExt` to fail are the problems with input annotation file.  
+Imagine a gene with a single transcript and 2 exons.    
+A properly formatted minimal GFF file should look like the following:   
+```
+chr1  source  gene 1 100 .  + . ID=gene1;
+chr1  source  transcript  1 100 . + . ID=transcript1;Parent=gene1
+chr1  source  exon  1 40  . + . ID=exon1;Parent=transcript1
+chr1  source  exon  70 100  . + . ID=exon1;Parent=transcript1    
+```
+GTF file is similar, but the 9-th column contains `gene_id` and  `transcript_id` attributes:   
+```
+#gff
+chr1  source  gene 1 100 .  + . gene_id "gene1";
+chr1  source  transcript  1 100 . + . gene_id "gene1"; transcript_id "transcript1"
+chr1  source  exon  1 40  . + . gene_id "gene1"; transcript_id "transcript1"
+chr1  source  exon  70 100  . + . gene_id "gene1"; transcript_id "transcript1"   
+```
+
+It is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
 
 Note:  
 1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
@@ -120,7 +103,7 @@ Note:
 
 If you already have used `cellranger`, then you can simply use its `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
-Note 1: for now, `GeneExt` only accepths a single alignment file, so you should concatenate your scRNA-seq fastq file for the following step:  
+Note: for now, `GeneExt` only accepths a single alignment file, so if you have multiple sequencing datasets, you should concatenate your scRNA-seq fastq file for the following step:  
 
 ```cat lane1.R2.fastq.gz lane2.R2.fastq.gz > data/cells.R2.fastq.gz```
 
@@ -282,3 +265,43 @@ However, as is stated above, having many "orphan" peaks in your annotation __wil
 
 For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1').    
 
+
+# TODOs:
+- [x] coverage filtering for the peaks  
+  - how to filter the peaks? - so far, by coverage  
+- [x] solve the problem with non-unique orphan peak naming  
+- [x] proper input/output parsing   
+- [x] peak coverage distributions check  
+   - results are not clear
+- [x] add man orphan peaks  
+- [x] add description of the output files    
+- [x] default max size - gene median length  
+- [x] speedup coverage computation? 
+- [x] .bam file subsampling to a manageable amount of reads 
+- [x] verbosity 1: simple output; verbosity 2 : a lot of output  
+- [x] filering based on the GENE-OVERLAPPING peaks!
+- [x] filtering by the mean coverage     
+- [x] Add reporting:   
+  - [x] distance from the closest peaks  
+- [x] update the function guessing the extension     
+- [x] remove big temporary files nog `--debug`  
+- [x] input gff -> output gtf  
+- [ ] solve `bedtools coverage` problem for large datasets    
+- [ ] check whether read fraction for subsampling works properly  
+- [ ] fix report path error when called outside of the directory   
+- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging later on  
+- [ ] no report if there is no alignmnet     
+- [ ] add log file  
+- [ ] __check extension modes__  
+- [ ] __check performance__   
+- [ ] skip peak filtering if not required  
+- [ ] add peak filtering manual        
+- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
+- [ ] add post-extension orphan peak filtering?      
+- [ ] make sure cellranger accepts the file with orphan peaks  
+- [ ] to output `crgtf` files for bed inputs  
+- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
+- [ ] estimated intergenic mapping proportion? - count the reads with samtools   
+- [ ] orphan peak linkage:
+  - [ ] simple distance merging     
+  - [ ] splice junctions if a splice junctions file is provided  
