@@ -69,7 +69,7 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
             read_count = aln.count(contig=reg.chrom, start=reg.start, stop=reg.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
             if mean:
                 read_count = read_count/(reg.end - reg.start)
-            fout.write("\t".join([reg.chrom,str(reg.start),str(reg.end),reg.id,'0',reg.strand,str(read_count)]))
+            fout.write("\t".join([reg.chrom,str(reg.start),str(reg.end),reg.id,'0',reg.strand,str(read_count)])+ "\n")
 
 
 def index_bam(infile,verbose = False,threads = 1):
