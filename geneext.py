@@ -26,8 +26,8 @@ parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percenti
 #parser.add_argument('--orphanp',default = 25, help = 'NOT IMPLEMENTED!\nCoverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
+parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for debugging.')
 parser.add_argument('--estimate', action='store_true', help = 'NOT IMPLEMENTED\nWhether to estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
-#parser.add_argument('--debug', action='store_true', help = 'Maximum verbosity for debugging')
 args = parser.parse_args()
 
 
@@ -61,7 +61,7 @@ do_report = args.report # add the option!
 do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate
-do_clean = True
+do_clean = not args.keep
 do_orphan_merge = False  
 
 #######################################################################
