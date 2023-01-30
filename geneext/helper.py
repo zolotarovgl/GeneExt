@@ -43,19 +43,19 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     if verbose > 1:
         print('Done collecting beds: %s' % (outfile))
 
-def _get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
-    """Computes bed coverage. If specified, can also compute mean coverage"""
-    if mean:
-        if verbose > 0:
-            print('Computing MEAN coverage!')
-        cmd = 'bedtools coverage -a %s -b %s -s -counts %s > %s' % (inputbed_a,input_bam,"| awk  '{$7=$7/($3-$2);print $0}' | sed  's/ /\\t/g'",outputfile)
-    else:
-        cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
-    # try samtools instead (should be faster): 
-    #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
-    if verbose > 1:
-        print('Running:\n%s' % cmd)
-    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+#def _get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
+#    """Computes bed coverage. If specified, can also compute mean coverage"""
+#    if mean:
+#        if verbose > 0:
+#            print('Computing MEAN coverage!')
+#        cmd = 'bedtools coverage -a %s -b %s -s -counts %s > %s' % (inputbed_a,input_bam,"| awk  '{$7=$7/($3-$2);print $0}' | sed  's/ /\\t/g'",outputfile)
+#    else:
+#        cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
+#    # try samtools instead (should be faster): 
+#    #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
+#    if verbose > 1:
+#        print('Running:\n%s' % cmd)
+#    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
     """Computes bed coverage. If specified, can also compute mean coverage"""
@@ -820,15 +820,32 @@ def get_median_gene_length(inputfile = None,fmt = None):
     return(med)
 
 # subsample bam file 
+#def _subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
+#   cmd = "N=$(samtools view -@ %s -c %s);awk -v N=$N -v T=%s 'BEGIN { print  ( T / N  ) }'" % (str(threads),str(inputbam),str(nreads))
+#    if verbose > 1:
+#        print('Running:\n%s' % cmd)
+#    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+#    frac = ps.communicate()[0].decode("utf-8").rstrip()
+#    # subsample the bam using samtools view 
+#    
+#    cmd = "samtools view -@ %s -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
+#    if verbose> 1:
+#        print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
+#    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+#    if verbose > 1:
+#        print(ps.communicate())
+#    else:
+#        ps.communicate()
+
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
-    cmd = "samtools idxstats %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(inputbam),str(nreads))
+    cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(threads),str(inputbam),str(nreads))
     if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     frac = ps.communicate()[0].decode("utf-8").rstrip()
     # subsample the bam using samtools view 
     
-    cmd = "samtools view -@ %s -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
+    cmd = "samtools view -@ %s -F 260 -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
     if verbose> 1:
         print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)

@@ -100,7 +100,7 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 ## BAM subsampling   
 
 If your 10x dataset is too big for `GeneExt` to run in meaninful time, you can subsample the `.bam` file to N reads using an option `--subsamplebam N`. This will significantly speed up the pipeline, but may come at a cost of missing some genes.   
-
+__CAVE:__ Subsampling make take a long time to run on a big file. If you are going to try multiple parameters for the same genome, it makes sense to subsample the dataset before using `GeneExt`.  
 
 ## Important parameters   
 
@@ -224,7 +224,7 @@ chr1  1 100 gene1 0 +
 
 # FAQs  
 
-## GeneExt does not accept my annotation 
+## GeneExt does not accept my annotation file  
 
 see [Input debugging](#input-troubleshooting)
 
@@ -267,7 +267,7 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] remove big temporary files nog `--debug`  
 - [x] input gff -> output gtf  
 - [x] solve `bedtools coverage` RAM problem for large datasets: replace with `pysam`   
-- [ ] check whether read fraction for subsampling works properly  
+- [x]  check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
 - [ ] fix report path error when called outside of the directory   
 - [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging later on  
 - [ ] no report if there is no alignmnet     

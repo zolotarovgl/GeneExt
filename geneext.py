@@ -212,6 +212,7 @@ if __name__ == "__main__":
         if verbose > 0:
             print('Subsampling done.')
         bamfile = subsampled_bam
+
 # 1. MACS2
     if do_macs2:
         print('======== Running macs2 =========================')
