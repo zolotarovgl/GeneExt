@@ -64,8 +64,8 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
     bed = parse_bed(inputbed_a) 
     with open(outputfile,'w') as fout:
         for i,reg in enumerate(bed):
-            if i % 1000 == 0:
-                print('%s/%s' % (i,len(bed)))
+            if verbose > 1 and i % 1000 == 0:
+                print('coverage: %s/%s regions done' % (i,len(bed)))
             read_count = aln.count(contig=reg.chrom, start=reg.start, stop=reg.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
             if mean:
                 read_count = read_count/(reg.end - reg.start)
