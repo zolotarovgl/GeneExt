@@ -43,7 +43,7 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     if verbose > 1:
         print('Done collecting beds: %s' % (outfile))
 
-def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
+def _get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
     """Computes bed coverage. If specified, can also compute mean coverage"""
     if mean:
         if verbose > 0:
@@ -56,6 +56,28 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
     if verbose > 1:
         print('Running:\n%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
+    """Computes bed coverage. If specified, can also compute mean coverage"""
+    import pysam
+    aln = pysam.AlignmentFile(input_bam, "rb")
+    bed = parse_bed(inputbed_a) 
+    with open(outputfile,'w') as fout:
+        for i,reg in enumerate(bed):
+            if i % 1000 == 0:
+                print('%s/%s' % (i,len(bed)))
+            read_count = aln.count(contig=reg.chrom, start=reg.start, stop=reg.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
+            if mean:
+                read_count = read_count/(reg.end - reg.start)
+            fout.write("\t".join([reg.chrom,str(reg.start),str(reg.end),reg.id,'0',reg.strand,str(read_count)]))
+
+
+def index_bam(infile,verbose = False,threads = 1):
+
+    cmd = 'samtools index -@ %s %s' % (threads,infile)
+    if verbose>1:
+        print('Running:\n%s' % cmd)
+    os.system(cmd)
 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
     """Given an input bed file with a coverage, get a coverage percentile"""

@@ -15,6 +15,8 @@ Dependencies:
 * `samtools`
 * python `gffutils`  
 * python `numpy`  
+* python `pysam`  
+
 
 These dependencies can be installed with `conda`: 
 
@@ -23,7 +25,7 @@ These dependencies can be installed with `conda`:
 conda create -n geneext
 conda activate genext
 # install dependencies
-conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools 
+conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam  
 ```
 
 
@@ -48,7 +50,7 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 ![Pipeline](./img/pipeline.png)
 
 1. `GeneExt` is supposed to accept alignment files of reads from any 3'-end biased single-cell or bulk RNA-seq protocol. It will then call peaks from this data using `macs2` software and will try to extend genes to the peaks downstream. Alternatively, if you already have peaks you want to extend the genes to (e.g. somehow determined mRNA cleavage site coordinates), having `macs2` installed is not necessary. 
-2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an '-m' parameter (see below).  
+2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an `-m` parameter (see below).  
 3. After genes are extended, `GeneExt` will write an a file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
 
 
@@ -56,7 +58,7 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 
 To run `GeneExt`, you will need the following:  
 
-1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis "Where do I get my .bam file?")  
+1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis ["Where can I get a .bam file?"](#where-can-i-get-a-bam-file))  
 2. Genome annotation in the `bed`, `gff` or `gtf` formats  
 
 Note 1: in a `bed` file, only gene ranges should be present.  
@@ -67,37 +69,7 @@ Note 2: if using `.gff/.gtf` file, make sure there are "gene" features defined!
 * `gff` &rarr; `gtf`  
 * `gtf` &rarr; `gtf`  
 
-In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible.   
-
-# Input debugging  
-
-> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
->
-> Anna Karenina principle for genome annotation files
-
-By far the most probable reason for `GeneExt` to fail are the problems with input annotation file.  
-Imagine a gene with a single transcript and 2 exons.    
-A properly formatted minimal GFF file should look like the following:   
-```
-chr1  source  gene 1 100 .  + . ID=gene1;
-chr1  source  transcript  1 100 . + . ID=transcript1;Parent=gene1
-chr1  source  exon  1 40  . + . ID=exon1;Parent=transcript1
-chr1  source  exon  70 100  . + . ID=exon1;Parent=transcript1    
-```
-GTF file is similar, but the 9-th column contains `gene_id` and  `transcript_id` attributes:   
-```
-#gff
-chr1  source  gene 1 100 .  + . gene_id "gene1";
-chr1  source  transcript  1 100 . + . gene_id "gene1"; transcript_id "transcript1"
-chr1  source  exon  1 40  . + . gene_id "gene1"; transcript_id "transcript1"
-chr1  source  exon  70 100  . + . gene_id "gene1"; transcript_id "transcript1"   
-```
-
-It is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
-
-Note:  
-1. In "mock" `gtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
-2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
+In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their 9-th column attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting))   
 
 ## Where can I get a .bam file?   
 
@@ -154,16 +126,18 @@ Note: in general, it doesn't matter which type of extension you choose - it shou
 
 ### --peakp Filtering peaks based on coverage  
 
-To make `GeneExt` more stringent in peak calling, one can filter the peaks by coverage.  
+To make `GeneExt` more conservative in peak calling, peaks are filtered based on the average coverage.   
+After calling the peaks, `GeneExt` will calculate per-base coverage distribution for __genic__ peaks (i.e. peaks overlapping genes). This distribution is then used to filter __intergenic peaks__. `--peakp` sets a quantile of that distribution above which intergenic peaks are retained.  
 
+![Peak filtering](./img/peak_filtering.png)   
 
-__[t.b.a]__ 
+Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.   
 
 ### --orphan What are the "orphan peaks"?  
 
-The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to long 3'-UTRs or __unannotated genes__: 
+The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__: 
 
-!['Missing_gene'](./img/missing_gene.png)
+![Missing_gene](./img/missing_gene.png)
 
 To capture cases like this, `GeneExt` provides an option to keep the peaks that haven't been assigned to any gene ("orphan").  
 __Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting.
@@ -213,38 +187,46 @@ If you have problems with running `GeneExt`, please, raise an issue in this dire
 
 
 
-## Available options   
+# Input troubleshooting  
+
+> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
+>
+> Anna Karenina principle for genome annotation files
+
+By far the most probable reason for `GeneExt` to fail are the problems with input annotation file. Below is a description of a minimal annotation file `GeneExt` can work with.   
+Imagine a gene with a single transcript and 2 exons. A properly formatted minimal GFF file should look like the following:   
+```
+chr1  source  gene 1 100 .  + . ID=gene1;
+chr1  source  transcript  1 100 . + . ID=transcript1;Parent=gene1
+chr1  source  exon  1 40  . + . ID=exon1;Parent=transcript1
+chr1  source  exon  70 100  . + . ID=exon1;Parent=transcript1    
+```
+GTF file is similar, but the 9-th column contains `gene_id` and  `transcript_id` attributes:   
+```
+chr1  source  gene 1 100 .  + . gene_id "gene1";
+chr1  source  transcript  1 100 . + . gene_id "gene1"; transcript_id "transcript1"
+chr1  source  exon  1 40  . + . gene_id "gene1"; transcript_id "transcript1"
+chr1  source  exon  70 100  . + . gene_id "gene1"; transcript_id "transcript1"   
+```
+
+It is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
+
+Notes:  
+1. In `crgtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
+2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
+3. If you are really desperate, try converting your `.gff/.gtf` file into a `.bed` file with only genomic ranges. `GeneExt` will try to output `crgtf` file:
 
 
-```man
-usage: geneext.py [-h] [-b B] -g G [-p P] -o O -m M [-inf INF] [-ouf OUF]
-                  [-t T] [-tag TAG] [-v V] [-j J] [-e E] [--orphan]
-
-Extend genes in 3' direction using single-cell RNA-seq data
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -b B        Input .bam file.
-  -g G        Genome .gtf/.gff/.bed file.
-  -p P        Peaks .bed file. Incompatible with -b.
-              If provided, extension is performed using specified peaks coordinates.
-              Can be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.
-  -o O        Output annotation.
-  -m M        Maximal distance for gene extension. [10000]
-  -inf INF    Input genes file format, if None, will be guessed from a file extension.
-  -ouf OUF    Output file format, if not given, will be guessed from a file extension.
-  -t T        Temporary directory. [tmp]
-  -tag TAG    Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]
-  -v V        Verbosity level. 0,[1],2
-  -j J        Number of cores for samtools. [1]
-  -e E        How to extend the gene (only for .gff/.gtf files) [new_mrna]
-                * new_transcript - creates a new transcript feature with the last exon extended
-                * new exon - creates an extended last exon
-  --orphan    NOT IMPLEMENTED! Whether to add orphan peaks
-```  
+```
+chr1  1 100 gene1 0 +
+```
 
 
 # FAQs  
+
+## GeneExt does not accept my annotation 
+
+see [Input debugging](#input-troubleshooting)
 
 ## GeneExt takes ages to run. How can I speed it up?  
 
@@ -252,8 +234,6 @@ optional arguments:
   By default, `GeneExt` will use the whole dataset to call the peaks. This may be computationally costly for big datasets (>50M reads). You can use `--subsamplebam 10000000` to randomly sample 10M reads (or any other amount). Keep in mind, __using more data is always better.__  
 2. Parallelization:  
   You can split your genome into individual chromosomes / contigs and run `GeneExt` on each of them separately  
-
- 
 
 ## I get too many orphan peaks. How should I filter them?   
 
@@ -286,7 +266,7 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] update the function guessing the extension     
 - [x] remove big temporary files nog `--debug`  
 - [x] input gff -> output gtf  
-- [ ] solve `bedtools coverage` problem for large datasets    
+- [x] solve `bedtools coverage` RAM problem for large datasets: replace with `pysam`   
 - [ ] check whether read fraction for subsampling works properly  
 - [ ] fix report path error when called outside of the directory   
 - [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging later on  
