@@ -267,7 +267,8 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] remove big temporary files nog `--debug`  
 - [x] input gff -> output gtf  
 - [x] solve `bedtools coverage` RAM problem for large datasets: replace with `pysam`   
-- [x]  check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
+- [x] check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
+- [ ] __mapping statistics estimation__  
 - [ ] fix report path error when called outside of the directory   
 - [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging later on  
 - [ ] no report if there is no alignmnet     

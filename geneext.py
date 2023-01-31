@@ -30,6 +30,9 @@ parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam
 parser.add_argument('--estimate', action='store_true', help = 'NOT IMPLEMENTED\nWhether to estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
 args = parser.parse_args()
 
+callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
+print(callcmd)
+#print([k+" "+v for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)])  )
 
 ########### Arguments ################
 ######################################
@@ -59,7 +62,7 @@ do_mapping = False
 do_macs2 = False  
 do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
-do_estimate = args.estimate
+do_estimate = args.estimate and bamfile
 do_clean = not args.keep
 do_orphan_merge = False  
 
@@ -169,9 +172,6 @@ def generate_report():
     #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv')
     os.system('Rscript geneext/report.r %s %s %s %s %s %s %s' % (maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
 
-def get_mapping_estimate(alignmentfile = None,generangesfile = None):
-    raise(NotImplementedError())
-
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
     toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or x[0] == '_']
@@ -206,6 +206,10 @@ if __name__ == "__main__":
         print('======== Running subsampling ===================')
         subsampled_bam = tempdir + '/subsampled.bam' 
         nsubs = int(args.subsamplebam)
+        if not os.path.isfile(bamfile + '.bai'):
+            if verbose > 0:
+                print('Indexing %s' % bamfile)
+            helper.index_bam(bamfile,verbose = verbose,threads=threads)
         # check here if it's an integer
         helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,threads=threads)
         # now, replace for downstream:
@@ -282,7 +286,13 @@ if __name__ == "__main__":
             print('Report: report.pdf')
     if do_estimate:
         print('======== Estimating intergenic mapping =========')
-        get_mapping_estimate(alignmentfile = bamfile,generangesfile = outputfile)
+        genicbed = tempdir + '/genic.bed'
+        intergenicbed = tempdir + '/intergenic.bed'
+        chrsizesfile = tempdir + '/chr_sizes.tab'
+
+        helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
+        helper.get_genic_beds(genomeanno=outputfile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
+        helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
     if do_clean:
         print('======== Cleaning temporary directory ==========')
         clean_tmp(tempdir = tempdir)

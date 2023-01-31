@@ -43,19 +43,15 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     if verbose > 1:
         print('Done collecting beds: %s' % (outfile))
 
-#def _get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
-#    """Computes bed coverage. If specified, can also compute mean coverage"""
-#    if mean:
-#        if verbose > 0:
-#            print('Computing MEAN coverage!')
-#        cmd = 'bedtools coverage -a %s -b %s -s -counts %s > %s' % (inputbed_a,input_bam,"| awk  '{$7=$7/($3-$2);print $0}' | sed  's/ /\\t/g'",outputfile)
-#    else:
-#        cmd = 'bedtools coverage -a %s -b %s -s -counts > %s' % (inputbed_a,input_bam,outputfile)
-#    # try samtools instead (should be faster): 
-#    #cmd = 'samtools bedcov %s %s > %s' % (inputbed_a,input_bam,outputfile)
-#    if verbose > 1:
-#        print('Running:\n%s' % cmd)
-#    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+def index_bam(infile,verbose = False,threads = 1):
+
+    cmd = 'samtools index -@ %s %s' % (threads,infile)
+    if verbose>1:
+        print('Running:\n%s' % cmd)
+    os.system(cmd)
+
+# Coverage functions   
 
 def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
     """Computes bed coverage. If specified, can also compute mean coverage"""
@@ -70,14 +66,6 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
             if mean:
                 read_count = read_count/(reg.end - reg.start)
             fout.write("\t".join([reg.chrom,str(reg.start),str(reg.end),reg.id,'0',reg.strand,str(read_count)])+ "\n")
-
-
-def index_bam(infile,verbose = False,threads = 1):
-
-    cmd = 'samtools index -@ %s %s' % (threads,infile)
-    if verbose>1:
-        print('Running:\n%s' % cmd)
-    os.system(cmd)
 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
     """Given an input bed file with a coverage, get a coverage percentile"""
@@ -853,3 +841,63 @@ def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,
         print(ps.communicate())
     else:
         ps.communicate()
+
+
+###################### Mapping estimate #####################
+# Estimate intergenic mapping for an new annotation  
+# create a chromosome size file - should be another function
+def get_chrsizes(tempdir = None,bamfile = None,outfile = None,verbose = False):
+    cmd = "samtools idxstats %s | cut -f 1-2 | awk '$2!=0' > %s" % (bamfile,outfile)
+    cmd = cmd.replace('__','"')
+    if verbose > 1 :
+        print('Running:\n%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+def get_genic_beds(genomeanno = None,genomechr = None,genicbed = None,intergenicbed = None,verbose = False,infmt = None):
+    """Splits the genome into bed files with genic and intergenic regions"""
+
+    # Genic regions
+    if infmt in ['gtf','gff']:
+        cmd = "awk -F '\\t|;' 'BEGIN{OFS=@\\t@} $3~/exon/ {print $1,$4,$5,@reg@NR,0,$7}' %s | bedtools sort -i - -g %s | bedtools merge -i - > %s" % (genomeanno,genomechr,genicbed)
+        cmd = cmd.replace('@','"')
+        if verbose > 1 :
+            print('Running:\n%s' % cmd)
+        ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    else:
+        raise(NotImplementedError())
+    # Intergenic regions
+    cmd = "complementBed -i %s -g %s > %s" % (genicbed,genomechr,intergenicbed)
+    if verbose > 1 :
+        print('Running:\n%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,verbose = False):
+    if bamfile is None or genicbed is None or intergenicbed is None:
+        print('Missing arguments for estimate mapping')
+        quit()
+    else:
+        # Genic reads
+        cmd = "samtools view -@ %s -c --region %s %s" % (threads,genicbed,bamfile)
+        if verbose > 1 :
+            print('Running:\n%s' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        Ngen = ps.communicate()[0].decode("utf-8").rstrip()
+        
+        # Intergenic reads 
+        cmd = "samtools view -@ %s -c --region %s %s" % (threads,intergenicbed,bamfile)
+        if verbose > 1 :
+            print('Running:\n%s' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        Nigen = ps.communicate()[0].decode("utf-8").rstrip()
+
+        # Total reads 
+        cmd = "samtools view -@ %s -F 4 -c  %s" % (threads,bamfile)
+        if verbose > 1 :
+            print('Running:\n%s\n' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        Ntot = ps.communicate()[0].decode("utf-8").rstrip()
+        Ntot = int(Ntot)
+        Ngen = int(Ngen)
+        Nigen = int(Nigen)
+        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot,2)),str(Nigen),str(round(Nigen/Ntot,2))))        
+
