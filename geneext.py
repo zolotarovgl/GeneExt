@@ -274,7 +274,7 @@ if __name__ == "__main__":
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     if do_orphan:
         print('======== Adding orphan peaks ===================')
-        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_merge)
+        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
     if do_report:
         print('======== Creating report =======================')
         generate_report()
