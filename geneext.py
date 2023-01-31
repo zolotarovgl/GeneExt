@@ -238,10 +238,10 @@ if __name__ == "__main__":
         covfile = tempdir + '/' + 'allpeaks_coverage.bed'
         # compute coverage for all the peaks:
         # check if bam file is indexed:
-        #if not os.path.isfile(bamfile + '.bai'):
-        if verbose > 0:
-            print('Indexing %s' % bamfile)
-        helper.index_bam(bamfile,verbose = verbose,threads=threads)
+        if not os.path.isfile(bamfile + '.bai'):
+            if verbose > 0:
+                print('Indexing %s' % bamfile)
+            helper.index_bam(bamfile,verbose = verbose,threads=threads)
         helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage)
         # get the peaks overlapping genes:
         if verbose > 0:

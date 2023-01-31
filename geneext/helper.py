@@ -891,7 +891,7 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         Nigen = ps.communicate()[0].decode("utf-8").rstrip()
 
         # Total reads 
-        cmd = "samtools view -@ %s -F 4 -c  %s" % (threads,bamfile)
+        cmd = "samtools view -@ %s -c  %s" % (threads,bamfile)
         if verbose > 1 :
             print('Running:\n%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
