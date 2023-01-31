@@ -102,6 +102,21 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 If your 10x dataset is too big for `GeneExt` to run in meaninful time, you can subsample the `.bam` file to N reads using an option `--subsamplebam N`. This will significantly speed up the pipeline, but may come at a cost of missing some genes.   
 __CAVE:__ Subsampling make take a long time to run on a big file. If you are going to try multiple parameters for the same genome, it makes sense to subsample the dataset before using `GeneExt`.  
 
+
+## What are the "orphan peaks" (`--orphan`)?  
+
+The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__: 
+
+![Missing_gene](./img/missing_gene.png)
+
+To capture cases like this, `GeneExt` provides an option to keep the peaks that haven't been assigned to any gene ("orphan").  
+__Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting. After you obtain a count matrix, you can always filter these peaks based on their size and expression level.    
+
+## Merging orphan peaks   
+
+`[t.b.a]`
+
+
 ## Important parameters   
 
 ### --m Maximal extension length   
@@ -132,16 +147,6 @@ After calling the peaks, `GeneExt` will calculate per-base coverage distribution
 ![Peak filtering](./img/peak_filtering.png)   
 
 Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.   
-
-### --orphan What are the "orphan peaks"?  
-
-The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__: 
-
-![Missing_gene](./img/missing_gene.png)
-
-To capture cases like this, `GeneExt` provides an option to keep the peaks that haven't been assigned to any gene ("orphan").  
-__Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting.
-After you obtain a count matrix, you can always filter these peaks based on their size and expression level.    
 
 # Tutorial  
 
@@ -253,7 +258,6 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] proper input/output parsing   
 - [x] peak coverage distributions check  
    - results are not clear
-- [x] add man orphan peaks  
 - [x] add description of the output files    
 - [x] default max size - gene median length  
 - [x] speedup coverage computation? 
@@ -264,25 +268,35 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] Add reporting:   
   - [x] distance from the closest peaks  
 - [x] update the function guessing the extension     
-- [x] remove big temporary files nog `--debug`  
+- [x] remove big temporary files nog `--keep`  
 - [x] input gff -> output gtf  
 - [x] solve `bedtools coverage` RAM problem for large datasets: replace with `pysam`   
 - [x] check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
-- [x] __mapping statistics estimation__  
+- [x] mapping statistics estimation    
+- [x] make mapping stats consistent
+- [ ] to output `crgtf` files for bed inputs  
+- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
+- [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  
+- [ ] separate the main page and the manual  
+
+
+Reporting:
 - [ ] fix report path error when called outside of the directory   
-- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for peak merging later on  
 - [ ] no report if there is no alignmnet     
 - [ ] add log file  
+
+Performance:  
 - [ ] __check extension modes__  
 - [ ] __check performance__   
-- [ ] skip peak filtering if not required  
-- [ ] add peak filtering manual        
-- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)   
-- [ ] add post-extension orphan peak filtering?      
+- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
+
+Orphan peaks:  
+- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   
 - [ ] make sure cellranger accepts the file with orphan peaks  
-- [ ] to output `crgtf` files for bed inputs  
-- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf   
-- [ ] estimated intergenic mapping proportion? - count the reads with samtools   
 - [ ] orphan peak linkage:
   - [ ] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
+
+Manual: 
+- [ ] add peak filtering manual        
+- [ ] add orphan peaks manual   

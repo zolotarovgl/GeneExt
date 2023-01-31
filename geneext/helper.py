@@ -60,7 +60,7 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
     bed = parse_bed(inputbed_a) 
     with open(outputfile,'w') as fout:
         for i,reg in enumerate(bed):
-            if verbose > 1 and i % 1000 == 0:
+            if verbose > 1 and i % 10000 == 0:
                 print('coverage: %s/%s regions done' % (i,len(bed)))
             read_count = aln.count(contig=reg.chrom, start=reg.start, stop=reg.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
             if mean:
@@ -584,27 +584,30 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     raise(NotImplementedError('Implement replacing old mRNA with a new one!'))
                 else:
                     raise(ValueError('Unknown extension type!'))
+                
                 # Write remaining transcripts per gene:
                 for transcript in db.children(feature.id,featuretype = 'transcript'): 
-                    if infmt == outfmt:
-                        fout.write(str(transcript) + '\n')
-                    elif infmt == 'gff' and outfmt == 'gtf':
-                        transcript['gene_id'] = feature.id
-                        transcript['transcript_id'] = transcript.id
-                        fout.write(str_gtf(transcript) + '\n')
-                    else:
-                        raise(NotImplementedError())
-                    for exon in db.children(transcript.id):
-                        if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
-                        # write down the exon
-                            if infmt == outfmt:
-                                fout.write(str(exon) + '\n')
-                            elif infmt == 'gff' and outfmt == 'gtf':
-                                exon['gene.id'] = feature.id
-                                exon['transcript_id'] = transcript.id
-                                fout.write(str_gtf(exon) + '\n')
-                            else:
-                                raise(NotImplementedError())
+                    if not transcript.id == mrna_id:
+                        if infmt == outfmt:
+                            fout.write(str(transcript) + '\n')
+                        elif infmt == 'gff' and outfmt == 'gtf':
+                            transcript['gene_id'] = feature.id
+                            transcript['transcript_id'] = transcript.id
+                            fout.write(str_gtf(transcript) + '\n')
+                        else:
+                            raise(NotImplementedError())
+                        for exon in db.children(transcript.id):
+                            if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
+                            # write down the exon
+                                if infmt == outfmt:
+                                    fout.write(str(exon) + '\n')
+                                elif infmt == 'gff' and outfmt == 'gtf':
+                                    exon['gene_id'] = feature.id
+                                    exon['transcript_id'] = transcript.id
+                                    fout.write(str_gtf(exon) + '\n')
+
+                                else:
+                                    raise(NotImplementedError())
 
             
             ######### Write the gene to the file as is ############
@@ -896,8 +899,8 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
             print('Running:\n%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ntot = ps.communicate()[0].decode("utf-8").rstrip()
+        
         Ntot = int(Ntot)
         Ngen = int(Ngen)
         Nigen = int(Nigen)
-        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot,2)),str(Nigen),str(round(Nigen/Ntot,2))))        
-
+        return((Ntot,Ngen,Nigen))

@@ -242,6 +242,8 @@ if __name__ == "__main__":
             if verbose > 0:
                 print('Indexing %s' % bamfile)
             helper.index_bam(bamfile,verbose = verbose,threads=threads)
+        if verbose > 0:
+            print('Computing coverage ...')
         helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage)
         # get the peaks overlapping genes:
         if verbose > 0:
@@ -276,6 +278,7 @@ if __name__ == "__main__":
 # 3. Extend genes 
     print('======== Extending genes =======================')
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
+    quit()
     if do_orphan:
         print('======== Adding orphan peaks ===================')
         run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
@@ -290,9 +293,18 @@ if __name__ == "__main__":
         intergenicbed = tempdir + '/intergenic.bed'
         chrsizesfile = tempdir + '/chr_sizes.tab'
 
+        print('%s:' % genefile)
+        helper.get_genic_beds(genomeanno=genefile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
+        Ntot, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
+        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2))))        
+        
+        print('%s:' % outputfile)
         helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
         helper.get_genic_beds(genomeanno=outputfile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
-        helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
+        Ntot, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
+        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2))))        
+        
+
     if do_clean:
         print('======== Cleaning temporary directory ==========')
         clean_tmp(tempdir = tempdir)
