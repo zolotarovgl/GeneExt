@@ -170,7 +170,7 @@ def generate_report():
     """This function will take as an input gene extensions and plot the distributions"""
     # script.R maxdist quant closest_gene_file allpeaks_cov_file allpeaks_noov_file extension_file
     #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv')
-    os.system('Rscript geneext/report.r %s %s %s %s %s %s %s' % (maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
+    os.system('Rscript %s/geneext/report.r %s %s %s %s %s %s %s' % (scriptloc,maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
 
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
@@ -179,6 +179,11 @@ def clean_tmp(tempdir = None):
         if verbose > 0:
             print("Removing %s" % file)
         os.remove(file)
+
+def report_stats(filename=None,Ntot=None,Nmap=None,Ngen=None,Nigen=None):
+    """Report mapping statistics in a way similar to cellranger"""
+    o = '%s:\nTotal reads: %s\nMapped reads: %s (total: %s %%)\nGenic reads: %s (total: %s %%; mapped: %s %%)\nIntergenic reads: %s (total: %s %%; mapped: %s %%)' % (filename,str(Ntot),str(Nmap),str(round(Nmap/Ntot*100,2)),str(Ngen),str(round(Ngen/Ntot*100,2)),str(round(Ngen/Nmap*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2)),str(round(Nigen/Nmap*100,2)))
+    return(o)
 
 #####################################
 
@@ -278,7 +283,6 @@ if __name__ == "__main__":
 # 3. Extend genes 
     print('======== Extending genes =======================')
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
-    quit()
     if do_orphan:
         print('======== Adding orphan peaks ===================')
         run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
@@ -293,17 +297,19 @@ if __name__ == "__main__":
         intergenicbed = tempdir + '/intergenic.bed'
         chrsizesfile = tempdir + '/chr_sizes.tab'
 
-        print('%s:' % genefile)
-        helper.get_genic_beds(genomeanno=genefile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
-        Ntot, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
-        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2))))        
-        
-        print('%s:' % outputfile)
-        helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
-        helper.get_genic_beds(genomeanno=outputfile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
-        Ntot, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
-        print('Total mapped reads: %s\nGenic reads: %s (%s %%)\nIntergenic reads: %s (%s %%)' % (str(Ntot),str(Ngen),str(round(Ngen/Ntot*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2))))        
-        
+        with open(tempdir + '/mapping_stats.txt','w') as outfile:
+            helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
+            helper.get_genic_beds(genomeanno=genefile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
+            Ntot, Nmap, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
+            old_rep = report_stats(genefile,Ntot,Nmap,Ngen,Nigen)
+            helper.get_genic_beds(genomeanno=outputfile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
+            Ntot, Nmap, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
+            new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen)
+            print(old_rep)
+            print(new_rep)
+            outfile.write(old_rep + '\n')
+            outfile.write(new_rep + '\n')
+            outfile.close()
 
     if do_clean:
         print('======== Cleaning temporary directory ==========')

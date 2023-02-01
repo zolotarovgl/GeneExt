@@ -278,6 +278,8 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
 - [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  
 - [ ] separate the main page and the manual  
+- [ ] add the number of peaks reporting   
+- [ ] separate program for mapping estimation   
 
 
 Reporting:

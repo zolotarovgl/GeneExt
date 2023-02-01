@@ -861,7 +861,7 @@ def get_genic_beds(genomeanno = None,genomechr = None,genicbed = None,intergenic
 
     # Genic regions
     if infmt in ['gtf','gff']:
-        cmd = "awk -F '\\t|;' 'BEGIN{OFS=@\\t@} $3~/exon/ {print $1,$4,$5,@reg@NR,0,$7}' %s | bedtools sort -i - -g %s | bedtools merge -i - > %s" % (genomeanno,genomechr,genicbed)
+        cmd = "awk -F '\\t|;' 'BEGIN{OFS=@\\t@} $3~/gene/ {print $1,$4,$5,@reg@NR,0,$7}' %s | bedtools sort -i - -g %s | bedtools merge -i - > %s" % (genomeanno,genomechr,genicbed)
         cmd = cmd.replace('@','"')
         if verbose > 1 :
             print('Running:\n%s' % cmd)
@@ -887,11 +887,11 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         Ngen = ps.communicate()[0].decode("utf-8").rstrip()
         
         # Intergenic reads 
-        cmd = "samtools view -@ %s -c --region %s %s" % (threads,intergenicbed,bamfile)
-        if verbose > 1 :
-            print('Running:\n%s' % cmd)
-        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        Nigen = ps.communicate()[0].decode("utf-8").rstrip()
+        #cmd = "samtools view -@ %s -c --region %s %s" % (threads,intergenicbed,bamfile)
+        #if verbose > 1 :
+        #    print('Running:\n%s' % cmd)
+        #ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        #Nigen = ps.communicate()[0].decode("utf-8").rstrip()
 
         # Total reads 
         cmd = "samtools view -@ %s -c  %s" % (threads,bamfile)
@@ -900,7 +900,16 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ntot = ps.communicate()[0].decode("utf-8").rstrip()
         
+        # Mapped reads 
+        cmd = "samtools view -F 4 -@ %s -c  %s" % (threads,bamfile)
+        if verbose > 1 :
+            print('Running:\n%s\n' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        Nmap = ps.communicate()[0].decode("utf-8").rstrip()
+
         Ntot = int(Ntot)
+        Nmap = int(Nmap)
         Ngen = int(Ngen)
-        Nigen = int(Nigen)
-        return((Ntot,Ngen,Nigen))
+        #Nigen = int(Nigen)
+        Nigen = int(Nmap - Ngen)
+        return((Ntot,Nmap,Ngen,Nigen))
