@@ -147,34 +147,44 @@ def run_peakcalling():
 def run_orphan(infmt,outfmt,verbose,merge = False):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
     # aha, you have to do a second round of outersection but this time also regardless of the strand 
-    # to be conservativ
-    if infmt != 'bed':
-        # remove orphan peaks overlapping extended regions:  
-        genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
-        orphan_bed = tempdir + '/' + 'orphan.bed'
-        helper.gxf2bed(infile = outputfile,outfile = genefile_ext_bed,featuretype = 'gene')
-        helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
-        
-        # Now, add the orphan peaks:
-        if infmt == 'gtf' and outfmt == 'gtf':
-            helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
-        elif infmt == 'gff' and outfmt == 'gff':
-            helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = 'gff',verbose=verbose)
+    # to be conservative 
+    if merge:
+        raise(NotImplementedError())
+    else:        
+        if infmt != 'bed':
+            # remove orphan peaks overlapping extended regions:  
+            genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
+            orphan_bed = tempdir + '/' + 'orphan.bed'
+            helper.gxf2bed(infile = outputfile,outfile = genefile_ext_bed,featuretype = 'gene')
+            helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
+            helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = outfmt,verbose=verbose)
+            # Now, add the orphan peaks:
+ #           if infmt == 'gtf' and outfmt == 'gtf':
+ #               helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
+           # if outfmt == 'gtf':
+           #     helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
+           # elif outfmt == 'gff':
+           #     helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = 'gff',verbose=verbose)
+           # else:
+        #        print("Don't know how to add orphan peaks!")
         else:
             print("Don't know how to add orphan peaks!")
-    else:
-        print("Don't know how to add orphan peaks!")
+        
 
 # Reporting functions 
 def generate_report():
     """This function will take as an input gene extensions and plot the distributions"""
-    # script.R maxdist quant closest_gene_file allpeaks_cov_file allpeaks_noov_file extension_file
-    #args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv')
-    os.system('Rscript %s/geneext/report.r %s %s %s %s %s %s %s' % (scriptloc,maxdist,coverage_percentile/100,tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose)))
+    with open(tempdir + '/_callcmd','w') as outfile:
+        outfile.write(callcmd + '\n')
+    cmd = 'Rscript %s/geneext/report.r %s %s %s %s %s %s %s %s' % (scriptloc,maxdist,str(int(coverage_percentile)/100),tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose),outputfile)
+    if verbose > 1:
+        print('Running:\n%s' % cmd)
+    os.system(cmd)
+
 
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
-    toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or x[0] == '_']
+    toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or  x[0] == '_']
     for file in toremove:
         if verbose > 0:
             print("Removing %s" % file)

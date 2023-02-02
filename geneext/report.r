@@ -4,7 +4,7 @@
 # Number the genes with peaks assigned 
 # Gene extension distribution   
 #############################################################
-
+library(stringr)
 
 #maxdist = 10000
 #quant = .25
@@ -18,7 +18,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 
 
-#args = c('10000','.25','tmp/genes_peaks_closest','allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv',1)
+#args = c('10000','.25','tmp/genes_peaks_closest','tmp/allpeaks_coverage.bed','tmp/allpeaks_noov.bed','tmp/extensions.tsv',1,'dummy.gtf')
 maxdist = as.integer(args[1])
 quant = as.numeric(args[2])
 closest_gene_file = args[3]
@@ -26,13 +26,18 @@ allpeaks_cov_file = args[4]
 allpeaks_noov_file = args[5]
 extension_file = args[6]
 verbosity = as.integer(args[7])
+pref = args[8]
+pref = unlist(str_split(pref,'\\.'))[length(unlist(str_split(pref,'\\.')))-1]
+# read command call:
+tempdir = 'tmp'
+callcmd = readLines(sprintf('%s/_callcmd',tempdir))
 
 if(verbosity > 1){
     print(args)
 }
 
-pdf('report.pdf',width = 8.27, height = 11.69 )
-par(mfrow = c(3,2))
+pdf(sprintf('%s.pdf',pref),width = 8.27, height = 11.69 )
+par(mfrow = c(1,1))
 
 ############### read coverage and peak length ###############
 cov = read.table(allpeaks_cov_file,fill = T,nrows = -1)
@@ -63,16 +68,17 @@ f = clo[clo$V3<=maxdist,]
 peaks_below_threshold = length(unique(f$V1))
 genes_below_threshold = length(unique(f$V2))
 mean_peaks_per_gene_below_threshold = round(mean(sapply(split(f$V1,f$V2),length)),1)
-
+#########################################################
 plot.new()
-txt = sprintf('Number of peaks: %s\nNumber of peaks in genes: %s\nNumber of peaks outside of genes: %s\n-----After filtering (max %s bp)-----:\nN genes: %s\nN peaks: %s\nMean N peaks per gene: %s\nN genes extended: %s',
-n_peaks,n_peaks_in_genes,n_peaks_noov,maxdist,genes_below_threshold,peaks_below_threshold,mean_peaks_per_gene_below_threshold,n_ext)
-text(x=0.1, y=0.5, txt,pos = 4,cex = 1)  # first 2 numbers are xy-coordinates within [0, 1]
+txt = sprintf('%s\nNumber of peaks: %s\nNumber of peaks in genes: %s\nNumber of peaks outside of genes: %s\n-----After filtering (max %s bp)-----:\nN genes: %s\nN peaks: %s\nMean N peaks per gene: %s\nN genes extended: %s',
+callcmd,n_peaks,n_peaks_in_genes,n_peaks_noov,maxdist,genes_below_threshold,peaks_below_threshold,mean_peaks_per_gene_below_threshold,n_ext)
+text(x=0, y=0.9, txt,pos = 4,cex = 0.5)  # first 2 numbers are xy-coordinates within [0, 1]
 
 
 ######## Distance distributions ############
 #d = tapply(d$V2,d$V3,max)
 # plot distances of 3 closest peaks per gene 
+par(mfrow = c(3,2))
 thr = 50000 # cut distribution here
 dd = lapply(split(clo$V3,clo$V2),FUN = function(x) sort(x,decreasing = F)[1])
 dd = unlist(dd)

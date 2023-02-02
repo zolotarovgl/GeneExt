@@ -542,6 +542,10 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                             mrna.start = last_exon.start
                         mrna.source = mrna.source+'~'+tag
                         # create fictional mrnaid
+                        
+                        # if missing transcript_id (because they are the same as genes, add manually)
+                        if not 'transcript_id' in [x for x in mrna.attributes]:
+                            mrna['transcript_id'] = mrna['gene_id']
                         mrna.id = tag + '~' + mrna.id
                         mrna['transcript_id'][0] = mrna.id
 
@@ -709,9 +713,12 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     # write to a file:
     cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > %s/_genes_peaks_closest" % (temp_dir,temp_dir,temp_dir)
     if verbose > 1:
-        print('Running:\n\t%s > [output]' % cmd)
+        print('Running:\n\t%s' % cmd)
     os.system(cmd)
-
+    cmd = "cp %s/_genes_peaks_closest %s/genes_peaks_closest.tsv" % (temp_dir,temp_dir)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    os.system(cmd)
 
     # Assign genes to the most downstream peaks below extension threshold:
     peaks2genes = {x.split('\t')[0]:[x.split('\t')[1],int(x.split('\t')[2])] for x in out.split('\n')[:-1]}
@@ -868,11 +875,11 @@ def get_genic_beds(genomeanno = None,genomechr = None,genicbed = None,intergenic
         ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     else:
         raise(NotImplementedError())
-    # Intergenic regions
-    cmd = "complementBed -i %s -g %s > %s" % (genicbed,genomechr,intergenicbed)
-    if verbose > 1 :
-        print('Running:\n%s' % cmd)
-    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    ## Intergenic regions
+    #cmd = "complementBed -i %s -g %s > %s" % (genicbed,genomechr,intergenicbed)
+    #if verbose > 1 :
+    #    print('Running:\n%s' % cmd)
+    #ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,verbose = False):
     if bamfile is None or genicbed is None or intergenicbed is None:
@@ -881,7 +888,7 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
     else:
         # Genic reads
         cmd = "samtools view -@ %s -c --region %s %s" % (threads,genicbed,bamfile)
-        if verbose > 1 :
+        if verbose > 2 :
             print('Running:\n%s' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ngen = ps.communicate()[0].decode("utf-8").rstrip()
@@ -895,14 +902,14 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
 
         # Total reads 
         cmd = "samtools view -@ %s -c  %s" % (threads,bamfile)
-        if verbose > 1 :
+        if verbose > 2 :
             print('Running:\n%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ntot = ps.communicate()[0].decode("utf-8").rstrip()
         
         # Mapped reads 
         cmd = "samtools view -F 4 -@ %s -c  %s" % (threads,bamfile)
-        if verbose > 1 :
+        if verbose > 2 :
             print('Running:\n%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Nmap = ps.communicate()[0].decode("utf-8").rstrip()
