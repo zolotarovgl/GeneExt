@@ -144,7 +144,7 @@ def run_peakcalling():
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def run_orphan(infmt,outfmt,verbose,merge = False):
+def _run_orphan(infmt,outfmt,verbose,merge = False):
     # Get the orpan peaks not assigned to any of the gene and add them to the genome
     # aha, you have to do a second round of outersection but this time also regardless of the strand 
     # to be conservative 
@@ -170,6 +170,25 @@ def run_orphan(infmt,outfmt,verbose,merge = False):
         else:
             print("Don't know how to add orphan peaks!")
         
+
+def get_orphan(genefile = None,genefile_ext_bed = None,orphan_bed = None,infmt = None, outfmt = None,verbose = False,merge = False):
+        """Store peaks not falling within new genic regions as orphan peaks """
+        if infmt != 'bed':
+            # remove orphan peaks overlapping extended regions:  
+            helper.gxf2bed(infile = genefile,outfile = genefile_ext_bed,featuretype = 'gene')
+            helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
+        else:
+            print("Don't know how to add orphan peaks!")
+
+def add_orphan(outputfile = None,peaksbed = None,outfmt = None, verbose = verbose):
+    helper.add_orphan_peaks(infile = outputfile,peaksbed= peaksbed,fmt = outfmt,verbose=verbose)    
+
+# pipeline function
+def run_orphan():
+    genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
+    orphan_bed = tempdir + '/' + 'orphan.bed'
+    get_orphan(genefile = genefile, genefile_ext_bed= genefile_ext_bed,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
+
 
 # Reporting functions 
 def generate_report():
@@ -295,7 +314,8 @@ if __name__ == "__main__":
     helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
     if do_orphan:
         print('======== Adding orphan peaks ===================')
-        run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
+        #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
+        run_orphan()
     if do_report:
         print('======== Creating report =======================')
         generate_report()
@@ -317,7 +337,7 @@ if __name__ == "__main__":
             new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen)
             print(old_rep)
             print(new_rep)
-            outfile.write(old_rep + '\n')
+            outfile.write(old_rep + '\n')sdf
             outfile.write(new_rep + '\n')
             outfile.close()
 

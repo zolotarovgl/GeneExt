@@ -131,13 +131,15 @@ Thus, instead of setting `-m` to unrealistically big values, we advice setting i
 ### --extension_mode Extension modes  
 
 Depending on the application (or rather your taste), you may want to add extensions differently.  
+Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
+
 Currently, the following modes are available:   
-* `new_transcript`  
-* `new_exon`  
+* `new_transcript` - copies the transcript with the most downstream exon and adds a new one with the most downstream exon extended  
+* `new_exon`  - adds the most downstream exon to the original transcript   
+
 
 ![Extension modes](./img/extension_modes.png)
 
-Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
 
 ### --peakp Filtering peaks based on coverage  
 
@@ -185,14 +187,7 @@ A peak in this distribution provides an estimate of a general length of missing 
 You can compare this distribution with the distribution of introduced gene extensions to see whether it makes sense to decrease a maximum allowed extension per gene.   
 
 
-
-## Help   
-
-If you have problems with running `GeneExt`, please, raise an issue in this directory or drop an email to `gzolotarov@crg.es`.
-
-
-
-# Input troubleshooting  
+## Input troubleshooting  
 
 > "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
 >
@@ -220,18 +215,19 @@ Notes:
 1. In `crgtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
 2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
 3. If you are really desperate, try converting your `.gff/.gtf` file into a `.bed` file with only genomic ranges. `GeneExt` will try to output `crgtf` file:
+  ```
+  chr1  1 100 gene1 0 +
+  ```
 
+### Check if your .gtf/.gff contains "gene" features  
 
-```
-chr1  1 100 gene1 0 +
-```
 
 
 # FAQs  
 
 ## GeneExt does not accept my annotation file  
 
-see [Input debugging](#input-troubleshooting)
+see [Input troubleshooting](##input-troubleshooting)
 
 ## GeneExt takes ages to run. How can I speed it up?  
 
@@ -280,16 +276,19 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [ ] separate the main page and the manual  
 - [ ] add the number of peaks reporting   
 - [ ] separate program for mapping estimation   
+- [ ] parallelize the coverage computation step   
 
 
 Reporting:
 - [ ] fix report path error when called outside of the directory   
 - [ ] no report if there is no alignmnet     
 - [ ] add log file  
+- [ ] clean all unnecessary files 
 
 Performance:  
 - [ ] __check extension modes__  
 - [ ] __check performance__   
+- [ ] fix other extension modes  
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
 
 Orphan peaks:  
