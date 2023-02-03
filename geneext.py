@@ -60,12 +60,11 @@ def error_print():
 # pipeline settings:
 do_mapping = False
 do_macs2 = False  
-do_orphan = args.orphan
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate and bamfile
 do_clean = not args.keep
-do_orphan_merge = False  
-
+do_orphan = args.orphan
+do_orphan_merge = True
 
 
 #######################################################################
@@ -144,34 +143,9 @@ def run_peakcalling():
     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
-def _run_orphan(infmt,outfmt,verbose,merge = False):
-    # Get the orpan peaks not assigned to any of the gene and add them to the genome
-    # aha, you have to do a second round of outersection but this time also regardless of the strand 
-    # to be conservative 
-    if merge:
-        raise(NotImplementedError())
-    else:        
-        if infmt != 'bed':
-            # remove orphan peaks overlapping extended regions:  
-            genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
-            orphan_bed = tempdir + '/' + 'orphan.bed'
-            helper.gxf2bed(infile = outputfile,outfile = genefile_ext_bed,featuretype = 'gene')
-            helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
-            helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = outfmt,verbose=verbose)
-            # Now, add the orphan peaks:
- #           if infmt == 'gtf' and outfmt == 'gtf':
- #               helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
-           # if outfmt == 'gtf':
-           #     helper.add_orphan_peaks(infile = outputfile,peaksbed = orphan_bed,fmt = 'gtf',tmp_outfile = tempdir + '/' + 'orphan_toadd.' + outfmt,tag = tag,verbose = verbose)
-           # elif outfmt == 'gff':
-           #     helper.add_orphan_peaks(infile = outputfile,peaksbed= orphan_bed,fmt = 'gff',verbose=verbose)
-           # else:
-        #        print("Don't know how to add orphan peaks!")
-        else:
-            print("Don't know how to add orphan peaks!")
-        
 
-def get_orphan(genefile = None,genefile_ext_bed = None,orphan_bed = None,infmt = None, outfmt = None,verbose = False,merge = False):
+############# Orphan peaks functions ##############
+def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_bed = None,infmt = None, outfmt = None,verbose = False,merge = False):
         """Store peaks not falling within new genic regions as orphan peaks """
         if infmt != 'bed':
             # remove orphan peaks overlapping extended regions:  
@@ -180,15 +154,27 @@ def get_orphan(genefile = None,genefile_ext_bed = None,orphan_bed = None,infmt =
         else:
             print("Don't know how to add orphan peaks!")
 
-def add_orphan(outputfile = None,peaksbed = None,outfmt = None, verbose = verbose):
-    helper.add_orphan_peaks(infile = outputfile,peaksbed= peaksbed,fmt = outfmt,verbose=verbose)    
+#def add_orphan(outputfile = None,peaksbed = None,outfmt = None, verbose = verbose):
+#    helper.add_orphan_peaks(infile = outputfile,peaksbed= peaksbed,fmt = outfmt,verbose=verbose)    
 
-# pipeline function
+
+# Pipeline: orphan peaks 
 def run_orphan():
     genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
     orphan_bed = tempdir + '/' + 'orphan.bed'
-    get_orphan(genefile = genefile, genefile_ext_bed= genefile_ext_bed,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
+    get_orphan(genefile = genefile, genefile_ext_bed= genefile_ext_bed,peaks_bed = peaksfilt,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
+    print('Orphan peaks: orphan peaks generated.')
+    if do_orphan_merge:
+        print('Orphan peaks: merging by distance')
+        orphan_merged_bed  = tempdir + '/' + 'orphan_merged.bed'
+        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,tempdir = tempdir,verbose = verbose)
+        print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
+        helper.add_orphan_peaks(infile = outputfile,peaksbed='tmp/orphan_merged.bed',fmt = outfmt,verbose=verbose) 
+    else:
+        print('Orphan peaks: no merging -> directly adding orphan peaks')
+        helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_bed,fmt = outfmt,verbose=verbose)  
 
+##################################################
 
 # Reporting functions 
 def generate_report():
@@ -337,7 +323,7 @@ if __name__ == "__main__":
             new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen)
             print(old_rep)
             print(new_rep)
-            outfile.write(old_rep + '\n')sdf
+            outfile.write(old_rep + '\n')
             outfile.write(new_rep + '\n')
             outfile.close()
 

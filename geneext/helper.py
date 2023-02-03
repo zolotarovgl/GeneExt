@@ -10,13 +10,13 @@ def split_strands(bamfile,outdir,verbose = False,threads = 1):
     """Using samtools, separate input bam file by strands"""
     cmd='samtools view  -@ %s -F 16 %s -b > %s' % (threads,bamfile,outdir + '/plus.bam')
     if verbose > 1:
-        print('Running:\n%s' % cmd) 
+        print('Running:\n\t%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     if verbose > 1:
         print(ps)
     cmd='samtools view  -@ %s -f 16 %s -b > %s' % (threads,bamfile,outdir + '/minus.bam')
     if verbose > 1:
-        print('Running:\n%s' % cmd) 
+        print('Running:\n\t%s' % cmd) 
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     if verbose > 1:
         print(ps)
@@ -26,7 +26,7 @@ def run_macs2(bamfile,peaks_prefix,outdir,verbose = False):
     cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
     try:
         if verbose > 1:
-            print('Running:\n%s' % ' '.join(cmd))
+            print('Running:\n\t%s' % ' '.join(cmd))
         ps = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         ps.check_returncode()
     except subprocess.CalledProcessError as e:
@@ -38,7 +38,7 @@ def collect_macs_beds(outdir,outfile,verbose = False):
     cmd = "cat %s/plus_peaks.broadPeak %s/minus_peaks.broadPeak | cut -f 1-6 | awk 'BEGIN{OFS=__\\t__}{if($4~/plus/){$6=__+__}else{$6=__-__};print $0}' | bedtools sort -i - > %s" % (outdir,outdir,outfile)
     cmd = cmd.replace('__','"')
     if verbose > 1 :
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     if verbose > 1:
         print('Done collecting beds: %s' % (outfile))
@@ -48,7 +48,7 @@ def index_bam(infile,verbose = False,threads = 1):
 
     cmd = 'samtools index -@ %s %s' % (threads,infile)
     if verbose>1:
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     os.system(cmd)
 
 # Coverage functions   
@@ -74,7 +74,7 @@ def get_coverage_percentile(inputfile = None,percentile = None, verbose = False)
                 print('Getting a %s-th percentile ...' % percentile)
     cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
     if verbose > 1:
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     out = ps.communicate()[0].decode("utf-8").rstrip()
     return(out)
@@ -86,7 +86,7 @@ def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbo
     """
     cmd = "awk '$NF>=%s' %s | cut -f 1-7 > %s" % (str(threshold),inputfile,outputfile)
     if verbose > 1:
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     # Report how many peaks have been retained:
     if verbose > 1:
@@ -104,7 +104,7 @@ def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
         strand = ''
     cmd = "bedtools intersect -a %s -b %s %s -v > %s" % (inputbed_a,inputbed_b,strand,outputbed)
     if verbose > 1:
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         
 # Parse helper
@@ -148,8 +148,9 @@ def parse_bed(infile):
     with open(infile) as file:
         lines = [line.rstrip().split('\t') for line in file if not '#' in line]
         regs = [Region(chrom = x[0],start = int(x[1]),end = int(x[2]),id = str(x[3]),strand = str(x[5]),score = int(x[4])) for x in lines]
-        return(regs)
     file.close()
+    return(regs)
+    
 
 def parse_gff(infile,featuretype = None):
     def gff_get_ID(x):
@@ -708,16 +709,16 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     os.system('bedtools sort -i %s/_genes_tmp > %s/_genes_tmp_sorted' % (temp_dir,temp_dir))
     cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
     if verbose > 1:
-        print('Running:\n\t%s > [output]' % cmd)
+        print('Running:\n\t\t%s > [output]' % cmd)
     out = os.popen(cmd).read()
     # write to a file:
     cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > %s/_genes_peaks_closest" % (temp_dir,temp_dir,temp_dir)
     if verbose > 1:
-        print('Running:\n\t%s' % cmd)
+        print('Running:\n\t\t%s' % cmd)
     os.system(cmd)
     cmd = "cp %s/_genes_peaks_closest %s/genes_peaks_closest.tsv" % (temp_dir,temp_dir)
     if verbose > 1:
-        print('Running:\n\t%s' % cmd)
+        print('Running:\n\t\t%s' % cmd)
     os.system(cmd)
 
     # Assign genes to the most downstream peaks below extension threshold:
@@ -773,7 +774,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
         print('\tExtended genes written: %s' % outfile)
 
 # Report functions 
-
+############################# Orphan peaks ############################################
 # Orphan peaks 
 def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None,tag = None,verbose = False):
     tag = 'GE_orphan'
@@ -782,7 +783,6 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
         raise(ValueError('Please, specify file format!'))
     if fmt in ['gff','gtf']:
         regs = parse_bed(peaksbed)
-
         if fmt == 'gff':
             with open(infile,'a') as file:
                 for reg in regs:
@@ -804,6 +804,37 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
             print('%s orphan peaks added' % (str(len(regs))))
 
 
+
+def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = None,verbose = False):
+    """This function merges orphan peaks by distance"""
+    pref = 'Orphan merging: '
+    maxsize = 100000 # maximum size of a peak cluster 
+    maxdist = 10000 # maximum distance of merging 
+    cmd = "bedtools merge -s -i %s -c 4,5,6 -o distinct,max,distinct -d %s | awk 'NF==6' | grep  , | awk '$3-$2<%s' > %s/_orphan_merged.bed" % (orphan_bed,maxdist,maxsize,tempdir)
+    if verbose > 1:
+        print('Maximum distance: %s; Maximum cluster size: %s' % (maxdist,maxsize))
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    cmd = "cut -f 4 %s/_orphan_merged.bed  | sed 's/,/\\n/g' | sort > %s/_orphan_toremove.txt" % (tempdir,tempdir)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    cmd = "grep -w -v -f %s/_orphan_toremove.txt %s | cut -f 1-6 > %s/_orphan_singleton.bed" % (tempdir,orphan_bed,tempdir)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    cmd = "sed -i 's/_peak_//g'  %s/_orphan_merged.bed; sed -i 's/,/./g' %s/_orphan_merged.bed" % (tempdir,tempdir)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    cmd = "cat %s/_orphan_merged.bed %s/_orphan_singleton.bed | awk 'NF==6' > %s" % (tempdir,tempdir,orphan_merged_bed)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+
 # get median length of the gene:
 def get_median_gene_length(inputfile = None,fmt = None):
     if fmt == 'gtf':
@@ -821,7 +852,7 @@ def get_median_gene_length(inputfile = None,fmt = None):
 #def _subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
 #   cmd = "N=$(samtools view -@ %s -c %s);awk -v N=$N -v T=%s 'BEGIN { print  ( T / N  ) }'" % (str(threads),str(inputbam),str(nreads))
 #    if verbose > 1:
-#        print('Running:\n%s' % cmd)
+#        print('Running:\n\t%s' % cmd)
 #    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 #    frac = ps.communicate()[0].decode("utf-8").rstrip()
 #    # subsample the bam using samtools view 
@@ -838,7 +869,7 @@ def get_median_gene_length(inputfile = None,fmt = None):
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(threads),str(inputbam),str(nreads))
     if verbose > 1:
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     frac = ps.communicate()[0].decode("utf-8").rstrip()
     # subsample the bam using samtools view 
@@ -860,7 +891,7 @@ def get_chrsizes(tempdir = None,bamfile = None,outfile = None,verbose = False):
     cmd = "samtools idxstats %s | cut -f 1-2 | awk '$2!=0' > %s" % (bamfile,outfile)
     cmd = cmd.replace('__','"')
     if verbose > 1 :
-        print('Running:\n%s' % cmd)
+        print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def get_genic_beds(genomeanno = None,genomechr = None,genicbed = None,intergenicbed = None,verbose = False,infmt = None):
@@ -871,14 +902,14 @@ def get_genic_beds(genomeanno = None,genomechr = None,genicbed = None,intergenic
         cmd = "awk -F '\\t|;' 'BEGIN{OFS=@\\t@} $3~/gene/ {print $1,$4,$5,@reg@NR,0,$7}' %s | bedtools sort -i - -g %s | bedtools merge -i - > %s" % (genomeanno,genomechr,genicbed)
         cmd = cmd.replace('@','"')
         if verbose > 1 :
-            print('Running:\n%s' % cmd)
+            print('Running:\n\t%s' % cmd)
         ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     else:
         raise(NotImplementedError())
     ## Intergenic regions
     #cmd = "complementBed -i %s -g %s > %s" % (genicbed,genomechr,intergenicbed)
     #if verbose > 1 :
-    #    print('Running:\n%s' % cmd)
+    #    print('Running:\n\t%s' % cmd)
     #ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,verbose = False):
@@ -889,28 +920,28 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         # Genic reads
         cmd = "samtools view -@ %s -c --region %s %s" % (threads,genicbed,bamfile)
         if verbose > 2 :
-            print('Running:\n%s' % cmd)
+            print('Running:\n\t%s' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ngen = ps.communicate()[0].decode("utf-8").rstrip()
         
         # Intergenic reads 
         #cmd = "samtools view -@ %s -c --region %s %s" % (threads,intergenicbed,bamfile)
         #if verbose > 1 :
-        #    print('Running:\n%s' % cmd)
+        #    print('Running:\n\t%s' % cmd)
         #ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         #Nigen = ps.communicate()[0].decode("utf-8").rstrip()
 
         # Total reads 
         cmd = "samtools view -@ %s -c  %s" % (threads,bamfile)
         if verbose > 2 :
-            print('Running:\n%s\n' % cmd)
+            print('Running:\n\t%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Ntot = ps.communicate()[0].decode("utf-8").rstrip()
         
         # Mapped reads 
         cmd = "samtools view -F 4 -@ %s -c  %s" % (threads,bamfile)
         if verbose > 2 :
-            print('Running:\n%s\n' % cmd)
+            print('Running:\n\t%s\n' % cmd)
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         Nmap = ps.communicate()[0].decode("utf-8").rstrip()
 
