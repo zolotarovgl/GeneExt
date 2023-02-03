@@ -107,6 +107,18 @@ def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         
+
+def intersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
+    """This function returns non-overlapping peaks"""
+    if by_strand:
+        strand = '-s'
+    else:
+        strand = ''
+    cmd = "bedtools intersect -wa -a %s -b %s %s > %s" % (inputbed_a,inputbed_b,strand,outputbed)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
 # Parse helper
 def gxf2bed(infile,outfile,featuretype = None):
     """This function loads the gff/gtf file and returns a bed file"""

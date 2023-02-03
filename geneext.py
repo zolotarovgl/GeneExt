@@ -1,6 +1,7 @@
 ######################################################################################################## 
 import argparse
 from argparse import RawTextHelpFormatter
+from geneext import helper
 
 import os
 import subprocess
@@ -26,8 +27,11 @@ parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percenti
 #parser.add_argument('--orphanp',default = 25, help = 'NOT IMPLEMENTED!\nCoverage threshold (percentile of orphan peaks coverage). [0-100, 75 by default].\nThis parameter allows to filter out the orphan peaks based on the coverage (AFTER gene extension).')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
-parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for debugging.')
-parser.add_argument('--estimate', action='store_true', help = 'NOT IMPLEMENTED\nWhether to estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
+parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
+parser.add_argument('--estimate', action='store_true', help = 'Whether to estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
+parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.')
+parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [100000]')
+parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: 2 x [median gene length, bp]')
 args = parser.parse_args()
 
 callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
@@ -63,70 +67,31 @@ do_macs2 = False
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate and bamfile
 do_clean = not args.keep
-do_orphan = args.orphan
-do_orphan_merge = True
-
-# Orphan peak defaults:
-orphan_maximum_distance = 10000
-orphan_maximum_size = 100000
-
-#######################################################################
-if peaksfile is None and bamfile is None:
-    print("Please, specify either alignment [-b] or peaks file [-p]!")
-    error_print()
-
-if outputfile is None:
-    print('Please, specify the output file [-o]!')
-    error_print()
-
-#if maxdist is None:
-#    print('Please, specify the maximum length of gene extension [-m]!')
-#    error_print()
-
-if bamfile is not None:
-    if os.path.isfile(bamfile):
-        do_macs2 = True
-        print('Alighment file ... OK')
-    else:
-        print('Specified alignment file does not exist!')
-        error_print()
-
-elif peaksfile is not None:
-    if os.path.isfile(peaksfile):
-        do_macs2 = False
-        print('Found a peaks file, skipping macs2 ...')
-    else:
-        print('Specified peaks file does not exist!\nPlease, specify either a valid .bam file for macs2 or a peaks file.')
-        error_print()
-
-if peaksfile is not None and bamfile is not None:
-    print('Please, specify either a .bam file with reads [-b] or a peaks file [-p] but not both at the same time!')
-    error_print()
-
-if genefile is None:
-    print('Missing genome annotation file [-g]!')
-    error_print()
-
-elif not os.path.isfile(genefile):
-    print('Genome annotation file .... DOES NOT EXIST!')
-    error_print()
-else:
-    print('Genome annotation file .... OK')
-
-# set temporary directory:
-if verbose > 0:
-    print("Temporary directory: %s" % tempdir)
-if not os.path.exists(tempdir):
-   os.makedirs(tempdir)
-   if verbose > 0:
-        print('Directory created: %s' % tempdir)
-
 do_report = args.report and do_macs2
+do_orphan = args.orphan
+do_orphan_merge =  do_orphan and not args.nomerge
+
+
+# Orphan merging defaults:
+orphan_maximum_distance =int(args.orphan_maxdist)
+orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
+
+#if not args.orphan_maxdist:
+#    orphan_maximum_distance = 10000
+#else: 
+#    orphan_maximum_distance =int(args.orphan_maxdist)
+#if not args.orphan_maxsize:
+#    orphan_maximum_size = 100000
+#else:
+#    orphan_maximum_size = int(args.orphan_maxsize)
+#######################################################################
+
+
 
 ########### Functions ################
 ######################################
 
-from geneext import helper
+
 
 
 ########### Main #####################
@@ -209,6 +174,58 @@ def report_stats(filename=None,Ntot=None,Nmap=None,Ngen=None,Nigen=None):
 if __name__ == "__main__":
     print('======== Preflight checks ======================')
     # parse input and output formats - run the pipeline accordingly
+    if peaksfile is None and bamfile is None:
+        print("Please, specify either alignment [-b] or peaks file [-p]!")
+        error_print()
+
+    if outputfile is None:
+        print('Please, specify the output file [-o]!')
+        error_print()
+
+    #if maxdist is None:
+    #    print('Please, specify the maximum length of gene extension [-m]!')
+    #    error_print()
+
+    if bamfile is not None:
+        if os.path.isfile(bamfile):
+            do_macs2 = True
+            print('Alighment file ... OK')
+        else:
+            print('Specified alignment file does not exist!')
+            error_print()
+
+    elif peaksfile is not None:
+        if os.path.isfile(peaksfile):
+            do_macs2 = False
+            print('Found a peaks file, skipping macs2 ...')
+        else:
+            print('Specified peaks file does not exist!\nPlease, specify either a valid .bam file for macs2 or a peaks file.')
+            error_print()
+
+    if peaksfile is not None and bamfile is not None:
+        print('Please, specify either a .bam file with reads [-b] or a peaks file [-p] but not both at the same time!')
+        error_print()
+
+    if genefile is None:
+        print('Missing genome annotation file [-g]!')
+        error_print()
+
+    elif not os.path.isfile(genefile):
+        print('Genome annotation file .... DOES NOT EXIST!')
+        error_print()
+    else:
+        print('Genome annotation file .... OK')
+
+    # set temporary directory:
+    if verbose > 0:
+        print("Temporary directory: %s" % tempdir)
+    if not os.path.exists(tempdir):
+        os.makedirs(tempdir)
+        if verbose > 0:
+                print('Directory created: %s' % tempdir)
+
+    
+    
     infmt,outfmt = parse_input_output_formats()
     if not infmt in ['bed','gff','gtf']:
         print('Unknown input format!')
@@ -218,6 +235,10 @@ if __name__ == "__main__":
         maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
         if verbose:
             print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
+    # if maximum size for orphan peak is not set, set it to the median gene size:
+    if do_orphan_merge:
+        if not orphan_maximum_size:
+            orphan_maximum_size = 2 * helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
     if verbose > 0:
         print('Checks done.')
 
@@ -273,7 +294,7 @@ if __name__ == "__main__":
         if verbose > 0:
             print('Getting genic peaks ...')
         genicpeaksfile = tempdir + '/genic_peaks.bed'
-        helper.outersect(inputbed_a = covfile, inputbed_b = genefile,outputbed=genicpeaksfile,by_strand = True,verbose = verbose)
+        helper.intersect(inputbed_a = covfile, inputbed_b = genefile,outputbed=genicpeaksfile,by_strand = True,verbose = verbose)
         if not coverage_percentile:
             if verbose > 0:
                 print('Coverage percentile is not set - retaining all the peaks...')
