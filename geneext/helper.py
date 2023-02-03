@@ -400,7 +400,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
             if n_exons and feature.id in extend_dictionary.keys(): 
-                if verbose > 1:
+                if verbose > 2:
                     print(feature.id)
                     print("%s strand." % db[feature.id].strand)
                     print("%s transcripts found" % n_transcripts )
@@ -417,14 +417,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     max_end = max([f.end for f in db.children(db[feature.id],featuretype='exon')])
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.end == max_end ][0]
                     last_exon.end = last_exon.end + extend_dictionary[feature.id]
-                    if verbose > 1:
+                    if verbose > 2:
                         print("Gene end chage: %s --> %s; %s" % (str(last_exon.end),str(last_exon.end+extend_dictionary[feature.id]),str(extend_dictionary[feature.id])))
                 elif db[feature.id].strand == '-':
                     feature.start = db[feature.id].start - extend_dictionary[feature.id]
                     max_end = min([f.start for f in db.children(db[feature.id],featuretype='exon')])
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.start == max_end ][0]
                     last_exon.start = last_exon.start - extend_dictionary[feature.id]
-                    if verbose > 1:
+                    if verbose > 2:
                         print("Gene end chage: %s --> %s; %s" % (str(last_exon.start),str(str(last_exon.start-extend_dictionary[feature.id])),str(extend_dictionary[feature.id])))
                 
                 
@@ -434,14 +434,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         raise(ImportError('Missing "Parent" feature for the exon: %s' % last_exon.id))
                     else:
                         mrna_id = last_exon['Parent'][0]
-                    if verbose > 1:
+                    if verbose > 2:
                         print("mRNA with the most downstream exon: %s" % mrna_id)
                 else:
                     if not 'transcript_id' in last_exon.attributes:
                         raise(ImportError('Missing "transcript_id" feature for the exon: %s' % last_exon.id))
                     else:
                         mrna_id = last_exon['transcript_id'][0]
-                    if verbose > 1:
+                    if verbose > 2:
                         print("mRNA with the most downstream exon: %s" % mrna_id)    
 
                 if extension_mode == 'new_transcript':
@@ -502,7 +502,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         mrna['three_prime_ext'] = str(extend_dictionary[feature.id])
 
                         ####### Write down the gene and extended mrna ######
-                        if verbose > 1:
+                        if verbose > 2:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         if outfmt == infmt:
                             fout.write(str(mrna)+'\n')
@@ -552,7 +552,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
                         ####### Write down the gene and extended mrna ######
                         fout.write(str(mrna)+'\n')
-                        if verbose > 1:
+                        if verbose > 2:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         cnt += 1
                         for child_exon in db.children(mrna_id,featuretype = 'exon'):
@@ -800,16 +800,16 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
                     file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % gid])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
-        if verbose > 0:
+        if verbose > -1:
             print('%s orphan peaks added' % (str(len(regs))))
 
 
 
-def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = None,verbose = False):
+def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = None,maxsize = None,maxdist = None,verbose = False):
     """This function merges orphan peaks by distance"""
     pref = 'Orphan merging: '
-    maxsize = 100000 # maximum size of a peak cluster 
-    maxdist = 10000 # maximum distance of merging 
+    #maxsize = 100000 # maximum size of a peak cluster 
+    #maxdist = 10000 # maximum distance of merging 
     cmd = "bedtools merge -s -i %s -c 4,5,6 -o distinct,max,distinct -d %s | awk 'NF==6' | grep  , | awk '$3-$2<%s' > %s/_orphan_merged.bed" % (orphan_bed,maxdist,maxsize,tempdir)
     if verbose > 1:
         print('Maximum distance: %s; Maximum cluster size: %s' % (maxdist,maxsize))

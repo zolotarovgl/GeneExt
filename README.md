@@ -277,6 +277,7 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [ ] add the number of peaks reporting   
 - [ ] separate program for mapping estimation   
 - [ ] parallelize the coverage computation step   
+- [ ] __add orphan peak mapping rate estimation__
 
 
 Reporting:
@@ -292,10 +293,10 @@ Performance:
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
 
 Orphan peaks:  
-- [ ] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   
-- [ ] make sure cellranger accepts the file with orphan peaks  
+- [x] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   
+- [x] make sure cellranger accepts the file with orphan peaks  
 - [ ] orphan peak linkage:
-  - [ ] simple distance merging     
+  - [x] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
 
 Manual: 

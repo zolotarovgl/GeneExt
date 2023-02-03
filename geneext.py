@@ -66,6 +66,9 @@ do_clean = not args.keep
 do_orphan = args.orphan
 do_orphan_merge = True
 
+# Orphan peak defaults:
+orphan_maximum_distance = 10000
+orphan_maximum_size = 100000
 
 #######################################################################
 if peaksfile is None and bamfile is None:
@@ -162,16 +165,17 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
 def run_orphan():
     genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
     orphan_bed = tempdir + '/' + 'orphan.bed'
+    # if no bam file provided - no coverage filtering - all peaks not overlapping the genes. Else - coverage-filtered peaks. 
     get_orphan(genefile = genefile, genefile_ext_bed= genefile_ext_bed,peaks_bed = peaksfilt,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
     print('Orphan peaks: orphan peaks generated.')
     if do_orphan_merge:
-        print('Orphan peaks: merging by distance')
+        print('Orphan peaks: merging by distance.')
         orphan_merged_bed  = tempdir + '/' + 'orphan_merged.bed'
-        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,tempdir = tempdir,verbose = verbose)
+        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
         print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
-        helper.add_orphan_peaks(infile = outputfile,peaksbed='tmp/orphan_merged.bed',fmt = outfmt,verbose=verbose) 
+        helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_merged_bed,fmt = outfmt,verbose=verbose) 
     else:
-        print('Orphan peaks: no merging -> directly adding orphan peaks')
+        print('Orphan peaks: no merging -> directly adding orphan peaks.')
         helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_bed,fmt = outfmt,verbose=verbose)  
 
 ##################################################
@@ -287,6 +291,7 @@ if __name__ == "__main__":
             print('Removing peaks overlapping genes ... => %s' % peaksfilt)
         helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
         helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
+        peaksfilt = peaksfiltcov
     else:
         # Simply remove peaks overlapping genes:
         peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
@@ -303,11 +308,10 @@ if __name__ == "__main__":
         #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
         run_orphan()
     if do_report:
-        print('======== Creating report =======================')
+        print('======== Creating PDF report =======================')
         generate_report()
-        if verbose > 0:
-            print('Report: report.pdf')
     if do_estimate:
+        # TODO: add orphan peak estimate in case there are orphan peaks? 
         print('======== Estimating intergenic mapping =========')
         genicbed = tempdir + '/genic.bed'
         intergenicbed = tempdir + '/intergenic.bed'
@@ -325,7 +329,7 @@ if __name__ == "__main__":
             print(new_rep)
             outfile.write(old_rep + '\n')
             outfile.write(new_rep + '\n')
-            outfile.close()
+        outfile.close()
 
     if do_clean:
         print('======== Cleaning temporary directory ==========')
