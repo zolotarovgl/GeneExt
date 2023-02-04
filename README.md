@@ -105,16 +105,29 @@ __CAVE:__ Subsampling make take a long time to run on a big file. If you are goi
 
 ## What are the "orphan peaks" (`--orphan`)?  
 
+### Definition  
+
 The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__: 
 
 ![Missing_gene](./img/missing_gene.png)
 
-To capture cases like this, `GeneExt` provides an option to keep the peaks that haven't been assigned to any gene ("orphan").  
+To capture cases like this, `GeneExt` provides an option to keep the peaks that pass coverage filtering but haven't been assigned to any gene (e.g. they are located too far from any genic region).  
+
 __Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting. After you obtain a count matrix, you can always filter these peaks based on their size and expression level.    
 
-## Merging orphan peaks   
+### Merging orphan peaks   
 
-`[t.b.a]`
+Missing genes may be represented by multiple orphan peaks corresponding to exonic regions. Having such peaks will lead to including highly correlated features which is undesirable for single-cell RNAseq analyses. 
+By default, `GeneExt` will try to merge such peaks by distance unless `--nomerge` is specified.  
+  
+Default settings are the following:  
+* Maximum distance between the peaks - 10000  
+* Maximum size of the orphan peak cluster - 100000  
+
+
+So far, the merged peaks are represented by a single continuos region.  
+
+
 
 
 ## Important parameters   
@@ -269,12 +282,13 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] solve `bedtools coverage` RAM problem for large datasets: replace with `pysam`   
 - [x] check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
 - [x] mapping statistics estimation    
-- [x] make mapping stats consistent
+- [x] make mapping stats consistent  
+- [x] add the function that adds the genes if not found in the file  
+- [ ] add the number of peaks reporting   
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
 - [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  
 - [ ] separate the main page and the manual  
-- [ ] add the number of peaks reporting   
 - [ ] separate program for mapping estimation   
 - [ ] parallelize the coverage computation step   
 - [ ] __add orphan peak mapping rate estimation__
