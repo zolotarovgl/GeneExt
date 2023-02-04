@@ -375,10 +375,19 @@ def gffutils_import_gxf(filepath,verbose = False):
 def replace_gff_gtf(x):
     return(x.replace(';;',';').replace('=',' "').replace(';','"; ')+'"')
 
-def str_gtf(f):
+def str_gtf(f,attributes = ['gene_id','transcript_id','three_prime_ext']):
     # creates a feature line from gffutils feature
     # clean attributes - retain only gene_id, transcript_id
-    ats = [x for x in f.attributes if x in ['gene_id','transcript_id','three_prime_ext']]
+    ats = [x for x in f.attributes if x in attributes]
+    at = '; '.join(['%s "%s"' % (k,v)  for k,v in zip([x for x in ats],[f[x][0] for x in ats])])
+    o = '\t'.join([f.chrom,f.source,f.featuretype,str(f.start),str(f.end),'.',f.strand,'.',at])
+
+    return(o)
+
+def str_gff(f,attributes= ['ID','Parent']):
+    # creates a feature line from gffutils feature
+    # clean attributes - retain only gene_id, transcript_id
+    ats = [x for x in f.attributes if x in attributes]
     at = '; '.join(['%s "%s"' % (k,v)  for k,v in zip([x for x in ats],[f[x][0] for x in ats])])
     o = '\t'.join([f.chrom,f.source,f.featuretype,str(f.start),str(f.end),'.',f.strand,'.',at])
 
@@ -963,3 +972,58 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         #Nigen = int(Nigen)
         Nigen = int(Nmap - Ngen)
         return((Ntot,Nmap,Ngen,Nigen))
+
+
+# add missing genes to the annotation file 
+def get_featuretypes(infile = None):
+    """To quickly check whether the file contains genes"""
+    with open(infile) as file:
+        return(set(line.split('\t')[2] for line in file))
+
+def add_gene_features(infile = None,outfile = None, infmt = None):
+    """Add gene features based on transcripts"""
+    # record the maximal span per gene 
+    db = gffutils.create_db(infile, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
+    #print('db loaded')
+    with open(outfile,'w') as ofile:
+        for feature in db.features_of_type("transcript"):
+            # check if there is a gene_id 
+            if infmt == 'gtf':
+                if 'gene_id' in feature.attributes:
+                    gene = feature
+                    gene.featuretype = 'gene'
+                    geneid = gene['gene_id'][0]
+                    ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+                    transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['gene_id']]
+                    #print('%s transcripts found.' % len(transcripts))
+                    for transcript in transcripts:
+                        ofile.write(str(transcript) + '\n')
+                        for child in db.children(db[transcript.id]):
+                            ofile.write(str(child) + '\n')
+                else:
+                    print('No "gene_id" found for transcript %s, where are the genes?' % feature.id)
+            if infmt == 'gff':
+                """Just copy as parent"""
+                if 'Parent' in feature.attributes:
+                    #print('Found Parent! -> setting as a gene ID')
+                    gene = feature
+                    gene.featuretype = 'gene'
+                    gene['ID'] = gene['Parent'][0]
+                    geneid = gene['Parent'][0]
+                    ofile.write(str_gff(gene,attributes = ['ID']) + '\n')
+                    # write the gene:
+                    #geneid = gene['Parent'][0]
+                    #o = "\t".join([gene.chrom,gene.source,str(gene.start),str(gene.end),'.',gene.strand,'.','gene_id "' + geneid + '"'])
+                    #ofile.write(o + '\n')         
+                    transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['Parent']]
+                    #print('%s transcripts found.' % len(transcripts))
+                    for transcript in transcripts:
+                        ofile.write(str(transcript) + '\n')
+                        for child in db.children(db[transcript.id]):
+                            ofile.write(str(child) + '\n')
+                else:
+                    print('No parent found for transcript %s, where are the genes?' % feature.id)
+
+        # what if there is no gene id? 
+    #with open(outfile,'w') as ofile:
+        

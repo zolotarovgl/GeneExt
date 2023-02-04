@@ -143,7 +143,6 @@ def run_orphan():
         print('Orphan peaks: no merging -> directly adding orphan peaks.')
         helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_bed,fmt = outfmt,verbose=verbose)  
 
-##################################################
 
 # Reporting functions 
 def generate_report():
@@ -224,12 +223,20 @@ if __name__ == "__main__":
         if verbose > 0:
                 print('Directory created: %s' % tempdir)
 
-    
+    ##################################################
     
     infmt,outfmt = parse_input_output_formats()
     if not infmt in ['bed','gff','gtf']:
         print('Unknown input format!')
         quit()
+    if infmt in ['gff','gtf']:
+            features = helper.get_featuretypes(genefile)
+            if not 'gene' in features:
+                print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+                genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_fixed.' + infmt)
+                helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt)
+                print('Fix done, annotation with gene features: %s' % genefilewgenes )
+                genefile = genefilewgenes
     # if -m is not set, get a median gene size:
     if not maxdist:
         maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
