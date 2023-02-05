@@ -232,7 +232,11 @@ Notes:
   chr1  1 100 gene1 0 +
   ```
 
-### Check if your .gtf/.gff contains "gene" features  
+## Adding missing "gene" features  
+
+Quite often `.gtf/.gff` file will miss "gene" features. In such cases, `GeneExt` will try to fix the annotation by inferring genes.  
+
+
 
 
 
@@ -257,7 +261,7 @@ However, as is stated above, having many "orphan" peaks in your annotation __wil
 
 ## Some orphan peaks look like missing genes - how can I link them?   
 
-For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1').    
+For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1'). If you observe a lot of such cases, you can try increasing parameters for orphan peak clustering and merging (`--orphan_maxdist`,`--orphan_size`).   
 
 
 # TODOs:
@@ -283,7 +287,9 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] check whether read fraction for subsampling works properly - it doesn't: mapped reads vs all of the reads  
 - [x] mapping statistics estimation    
 - [x] make mapping stats consistent  
-- [x] add the function that adds the genes if not found in the file  
+- [x] add the function that adds the genes if not found in the file 
+  - [x] test with the genomes available in the lab.   
+- [x] orphan peaks should be outersected with genic regions   
 - [ ] add the number of peaks reporting   
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     

@@ -118,7 +118,7 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
         if infmt != 'bed':
             # remove orphan peaks overlapping extended regions:  
             helper.gxf2bed(infile = genefile,outfile = genefile_ext_bed,featuretype = 'gene')
-            helper.outersect(inputbed_a = peaksfilt,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
+            helper.outersect(inputbed_a = peaks_bed,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
         else:
             print("Don't know how to add orphan peaks!")
 
@@ -131,7 +131,7 @@ def run_orphan():
     genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
     orphan_bed = tempdir + '/' + 'orphan.bed'
     # if no bam file provided - no coverage filtering - all peaks not overlapping the genes. Else - coverage-filtered peaks. 
-    get_orphan(genefile = genefile, genefile_ext_bed= genefile_ext_bed,peaks_bed = peaksfilt,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
+    get_orphan(genefile = outputfile, genefile_ext_bed= genefile_ext_bed,peaks_bed = peaksfilt,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
     print('Orphan peaks: orphan peaks generated.')
     if do_orphan_merge:
         print('Orphan peaks: merging by distance.')
@@ -234,7 +234,7 @@ if __name__ == "__main__":
             if not 'gene' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
                 genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_fixed.' + infmt)
-                helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt)
+                helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes
     # if -m is not set, get a median gene size:
@@ -266,6 +266,9 @@ if __name__ == "__main__":
         helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,threads=threads)
         # now, replace for downstream:
         if verbose > 0:
+            print('Indexing %s' % bamfile)
+        helper.index_bam(subsampled_bam,verbose = verbose,threads=threads)
+        if verbose > 0:
             print('Subsampling done.')
         bamfile = subsampled_bam
 
@@ -290,7 +293,7 @@ if __name__ == "__main__":
         covfile = tempdir + '/' + 'allpeaks_coverage.bed'
         # compute coverage for all the peaks:
         # check if bam file is indexed:
-        if not os.path.isfile(bamfile + '.bai'):
+        if not os.path.isfile(bamfile + '.bai') and 'subsample' in bamfile:
             if verbose > 0:
                 print('Indexing %s' % bamfile)
             helper.index_bam(bamfile,verbose = verbose,threads=threads)

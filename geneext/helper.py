@@ -980,13 +980,19 @@ def get_featuretypes(infile = None):
     with open(infile) as file:
         return(set(line.split('\t')[2] for line in file))
 
-def add_gene_features(infile = None,outfile = None, infmt = None):
+def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False):
     """Add gene features based on transcripts"""
     # record the maximal span per gene 
+    if verbose > 1:
+        print('Loading the database ...')
     db = gffutils.create_db(infile, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
+    if verbose > 1:
+        print('done.')   
     #print('db loaded')
     with open(outfile,'w') as ofile:
         for feature in db.features_of_type("transcript"):
+            if verbose > 1:
+                print(feature.id)   
             # check if there is a gene_id 
             if infmt == 'gtf':
                 if 'gene_id' in feature.attributes:
@@ -997,6 +1003,8 @@ def add_gene_features(infile = None,outfile = None, infmt = None):
                     transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['gene_id']]
                     #print('%s transcripts found.' % len(transcripts))
                     for transcript in transcripts:
+                        if verbose > 1:
+                            print(transcript.id)   
                         ofile.write(str(transcript) + '\n')
                         for child in db.children(db[transcript.id]):
                             ofile.write(str(child) + '\n')
