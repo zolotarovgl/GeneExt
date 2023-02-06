@@ -67,7 +67,7 @@ do_macs2 = False
 do_subsample = args.subsamplebam is not None
 do_estimate = args.estimate and bamfile
 do_clean = not args.keep
-do_report = args.report and do_macs2
+
 do_orphan = args.orphan
 do_orphan_merge =  do_orphan and not args.nomerge
 
@@ -223,6 +223,8 @@ if __name__ == "__main__":
         if verbose > 0:
                 print('Directory created: %s' % tempdir)
 
+    do_report = args.report and do_macs2
+
     ##################################################
     
     infmt,outfmt = parse_input_output_formats()
@@ -231,9 +233,19 @@ if __name__ == "__main__":
         quit()
     if infmt in ['gff','gtf']:
             features = helper.get_featuretypes(genefile)
+            if not 'transcript' in features:
+                print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+                if 'mRNA' in features:
+                    genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
+                    print('Found "mRNA" features - renaming as transcripts ...')
+                    helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
+                    genefile = genefilewmrna
+                else:
+                    print("Can't find any transcript or mRNA features in %s!" % genefile)
+                    quit()
             if not 'gene' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-                genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_fixed.' + infmt)
+                genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
                 helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes

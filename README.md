@@ -293,6 +293,9 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] __Fix extension to the overlapping peaks__  
   - [x] Distance to the END of the peak  
 - [x] add the number of peaks reporting   
+- [x] speedup gtf fixing function  
+- [x] add gene number reporting in gene adding function  
+- [x] add mRNA-> transcript conversion as a part of file fixing 
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
 - [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  
@@ -307,6 +310,8 @@ Reporting:
 - [ ] no report if there is no alignmnet     
 - [ ] add log file  
 - [ ] clean all unnecessary files 
+- [ ] more explicit intermediate file naming   
+
 
 Performance:  
 - [ ] __check extension modes__  

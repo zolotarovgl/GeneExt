@@ -430,7 +430,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     if n_exons == 0 or n_transcripts == 0:
                         print('No exons or transcripts found in the file!\nFeature types found in the annotation file:\n')
                         print('\n'.join([x for x in db.featuretypes()]))
-                        quit()
+                        continue
                 if db[feature.id].strand == '+':
                     # update gene bound:
                     # gene end is probably not updated properly
@@ -981,38 +981,51 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
 def get_featuretypes(infile = None):
     """To quickly check whether the file contains genes"""
     with open(infile) as file:
-        return(set(line.split('\t')[2] for line in file))
+        return(set(line.split('\t')[2] for line in file if not '#' in line))
 
 def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False):
     """Add gene features based on transcripts"""
     # record the maximal span per gene 
     if verbose > 1:
-        print('Loading the database ...')
+        print('Loading the database ...',flush = '')
     db = gffutils.create_db(infile, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
     if verbose > 1:
         print('done.')   
-    #print('db loaded')
+    # create a transcript2gene and gene2transcript dicts:
+    t2g = {}
+    for feature in db.features_of_type('transcript'):
+        # CAVE: this is where parsing may fail
+        if infmt == 'gtf':
+            geneid = feature['gene_id'][0]
+        elif infmt == 'gff':
+            geneid = feature['Parent'][0]
+        t2g.update({feature.id:geneid})
+    g2t = {}
+    g2t = {}
+    for t,g in t2g.items():
+        g2t.update({g:[t for t,v in t2g.items() if v == g]})
     with open(outfile,'w') as ofile:
-        for feature in db.features_of_type("transcript"):
-            if verbose > 1:
+        for i,feature in enumerate(db.features_of_type("transcript")):
+            if verbose > 1 and i % 1000 == 0:
+                print('%s/%s transcrpts done.' % (i,len(t2g)))
+            if verbose > 2:
                 print(feature.id)   
             # check if there is a gene_id 
             if infmt == 'gtf':
-                if 'gene_id' in feature.attributes:
-                    gene = feature
-                    gene.featuretype = 'gene'
-                    geneid = gene['gene_id'][0]
-                    ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
-                    transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['gene_id']]
-                    #print('%s transcripts found.' % len(transcripts))
-                    for transcript in transcripts:
-                        if verbose > 1:
-                            print(transcript.id)   
-                        ofile.write(str(transcript) + '\n')
-                        for child in db.children(db[transcript.id]):
-                            ofile.write(str(child) + '\n')
-                else:
-                    print('No "gene_id" found for transcript %s, where are the genes?' % feature.id)
+                gene = feature
+                gene.featuretype = 'gene'
+                geneid = t2g[gene.id]
+                ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+                #transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['gene_id']]
+                transcripts = [db[id] for id in g2t[geneid]]
+                if verbose > 2:
+                    print('%s transcripts found.' % len(transcripts))
+                for transcript in transcripts:
+                    if verbose > 2:
+                        print(transcript.id)   
+                    ofile.write(str(transcript) + '\n')
+                    for child in db.children(db[transcript.id]):
+                        ofile.write(str(child) + '\n')
             if infmt == 'gff':
                 """Just copy as parent"""
                 if 'Parent' in feature.attributes:
@@ -1026,7 +1039,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                     #geneid = gene['Parent'][0]
                     #o = "\t".join([gene.chrom,gene.source,str(gene.start),str(gene.end),'.',gene.strand,'.','gene_id "' + geneid + '"'])
                     #ofile.write(o + '\n')         
-                    transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['Parent']]
+                    transcripts = transcripts = [db[id] for id in g2t[geneid]]
                     #print('%s transcripts found.' % len(transcripts))
                     for transcript in transcripts:
                         ofile.write(str(transcript) + '\n')
@@ -1037,4 +1050,11 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
 
         # what if there is no gene id? 
     #with open(outfile,'w') as ofile:
-        
+    
+def mRNA2transcript(infile = None,outfile = None,verbose = False):
+    """In .gff/.gtf file, change the features of type 'mRNA' into 'transcript' """
+    cmd = "awk -F '\\t' 'BEGIN{OFS=@\\t@}{if($3==@mRNA@){$3=@transcript@};print $0}' %s > %s" % (infile,outfile)
+    cmd = cmd.replace('@','"')
+    if verbose > 1:
+        print('Running: %s' % cmd)
+    os.system(cmd)
