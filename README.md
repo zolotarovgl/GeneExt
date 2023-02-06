@@ -290,8 +290,9 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] add the function that adds the genes if not found in the file 
   - [x] test with the genomes available in the lab.   
 - [x] orphan peaks should be outersected with genic regions   
-- [ ] __Fix extension to the overlapping peaks__  
-- [ ] add the number of peaks reporting   
+- [x] __Fix extension to the overlapping peaks__  
+  - [x] Distance to the END of the peak  
+- [x] add the number of peaks reporting   
 - [ ] to output `crgtf` files for bed inputs  
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
 - [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  

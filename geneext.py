@@ -118,7 +118,7 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
         if infmt != 'bed':
             # remove orphan peaks overlapping extended regions:  
             helper.gxf2bed(infile = genefile,outfile = genefile_ext_bed,featuretype = 'gene')
-            helper.outersect(inputbed_a = peaks_bed,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose)
+            helper.outersect(inputbed_a = peaks_bed,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose,f = 0.0001)
         else:
             print("Don't know how to add orphan peaks!")
 
@@ -258,10 +258,11 @@ if __name__ == "__main__":
         print('======== Running subsampling ===================')
         subsampled_bam = tempdir + '/subsampled.bam' 
         nsubs = int(args.subsamplebam)
-        if not os.path.isfile(bamfile + '.bai'):
-            if verbose > 0:
-                print('Indexing %s' % bamfile)
-            helper.index_bam(bamfile,verbose = verbose,threads=threads)
+        if bamfile:
+            if not os.path.isfile(bamfile + '.bai'):
+                if verbose > 0:
+                    print('Indexing %s' % bamfile)
+                helper.index_bam(bamfile,verbose = verbose,threads=threads)
         # check here if it's an integer
         helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,threads=threads)
         # now, replace for downstream:
@@ -320,7 +321,8 @@ if __name__ == "__main__":
         peaksfiltcov = peaksfilt.replace('.bed','_fcov.bed')
         if verbose > 0:
             print('Removing peaks overlapping genes ... => %s' % peaksfilt)
-        helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+        # f=1 will filter out only the peaks fully contained within genes!!!
+        helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose,f = 1)
         helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
         peaksfilt = peaksfiltcov
     else:

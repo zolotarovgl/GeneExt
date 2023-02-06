@@ -96,13 +96,13 @@ def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbo
         N = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
         print('Retained %s/%s (%s %%)' % (str(n),str(N),str(round(int(n)/int(N)*100,2))))
 
-def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
+def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False,f = 0.0001):
     """This function returns non-overlapping peaks"""
     if by_strand:
         strand = '-s'
     else:
         strand = ''
-    cmd = "bedtools intersect -a %s -b %s %s -v > %s" % (inputbed_a,inputbed_b,strand,outputbed)
+    cmd = "bedtools intersect -f %s -a %s -b %s %s -v > %s" % (str(f),inputbed_a,inputbed_b,strand,outputbed)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -728,12 +728,15 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     # use bedtools to identify the closest genes for every peak 
     os.system('bedtools sort -i %s/_peaks_tmp > %s/_peaks_tmp_sorted' % (temp_dir,temp_dir))
     os.system('bedtools sort -i %s/_genes_tmp > %s/_genes_tmp_sorted' % (temp_dir,temp_dir))
-    cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
+    #cmd = "bedtools closest -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
+    # awk 'BEGIN{OFS=@\\t@}{if($NF==0){if($6==@+@){$NF=-($3-$9)}else{$NF=-($8-$2)}};print $0}'
+    cmd = "bedtools closest -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted | awk '$NF!=-1' | awk '($6 == @+@ && $8<=$2)||($6==@-@ && $9 >= $3)' | awk 'BEGIN{OFS=@\\t@}{if($6==@+@){$NF=-($3-$9)}else{$NF=-($8-$2)};print $0}' | cut -f 4,10,13 | awk '$3>=-%s'" % (temp_dir,temp_dir,str(maxdist))
+    cmd = cmd.replace('@','"')
     if verbose > 1:
         print('Running:\n\t\t%s > [output]' % cmd)
     out = os.popen(cmd).read()
     # write to a file:
-    cmd = "bedtools closest -io -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13 > %s/_genes_peaks_closest" % (temp_dir,temp_dir,temp_dir)
+    cmd = cmd + " > %s/_genes_peaks_closest" % (temp_dir)
     if verbose > 1:
         print('Running:\n\t\t%s' % cmd)
     os.system(cmd)
