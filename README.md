@@ -302,7 +302,8 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [ ] separate the main page and the manual  
 - [ ] separate program for mapping estimation   
 - [ ] parallelize the coverage computation step   
-- [ ] __add orphan peak mapping rate estimation__
+- [ ] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
+- [ ] add adding missing transcript features   
 
 
 Reporting:
@@ -314,10 +315,10 @@ Reporting:
 
 
 Performance:  
-- [ ] __check extension modes__  
-- [ ] __check performance__   
 - [ ] fix other extension modes  
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
+- [ ] add extension by continuous coverage   
+- [ ] add single exon extensoin 
 
 Orphan peaks:  
 - [x] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   
@@ -325,6 +326,7 @@ Orphan peaks:
 - [ ] orphan peak linkage:
   - [x] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
+- [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
 
 Manual: 
 - [ ] add peak filtering manual        
