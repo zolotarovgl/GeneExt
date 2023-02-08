@@ -834,11 +834,20 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = N
     pref = 'Orphan merging: '
     #maxsize = 100000 # maximum size of a peak cluster 
     #maxdist = 10000 # maximum distance of merging 
+    # merge orphan peaks by distance
     cmd = "bedtools merge -s -i %s -c 4,5,6 -o distinct,max,distinct -d %s | awk 'NF==6' | grep  , | awk '$3-$2<%s' > %s/_orphan_merged.bed" % (orphan_bed,maxdist,maxsize,tempdir)
     if verbose > 1:
         print('Maximum distance: %s; Maximum cluster size: %s' % (maxdist,maxsize))
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    # rename orphan clusters:
+    cmd = "awk '{print  $4@\\tpeak.cl@NR}' %s/_orphan_merged.bed > %s/_peak_to_cluster'" % (tempdir,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    
+    
+    # select the ones to remove 
     cmd = "cut -f 4 %s/_orphan_merged.bed  | sed 's/,/\\n/g' | sort > %s/_orphan_toremove.txt" % (tempdir,tempdir)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
@@ -853,7 +862,12 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = N
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-    cmd = "cat %s/_orphan_merged.bed %s/_orphan_singleton.bed | awk 'NF==6' > %s" % (tempdir,tempdir,orphan_merged_bed)
+    cmd = "awk 'BEGIN{OFS=@\t@}FNR==NR { p2c[$1]=$2; next }{print $1,$2,$3,p2c[$4],$5,$6}' %s/_peak_to_cluster %s/_orphan_merged.bed > %s/orphan_clusters.bed" % (tempdir,tempdir,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+        
+    cmd = "cat %s/orphan_clusters.bed %s/_orphan_singleton.bed | awk 'NF==6' > %s" % (tempdir,tempdir,orphan_merged_bed)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
