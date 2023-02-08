@@ -296,14 +296,14 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] speedup gtf fixing function  
 - [x] add gene number reporting in gene adding function  
 - [x] add mRNA-> transcript conversion as a part of file fixing 
-- [ ] to output `crgtf` files for bed inputs  
-- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf     
-- [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently!  
+- [ ] to output `crgtf` files for bed inputs  - gene, transcript, exon
+- [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf      
 - [ ] separate the main page and the manual  
 - [ ] separate program for mapping estimation   
 - [ ] parallelize the coverage computation step   
 - [ ] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
 - [ ] add adding missing transcript features   
+- [ ] add a possibility to rerun an analysis  from a temporary directory - need to package the whole pipeline differently! 
 
 
 Reporting:
@@ -326,6 +326,7 @@ Orphan peaks:
 - [ ] orphan peak linkage:
   - [x] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
+- [x] rename orphan peak clusters  
 - [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
 
 Manual: 

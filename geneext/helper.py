@@ -862,11 +862,11 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = N
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-    cmd = "awk 'BEGIN{OFS=@\t@}FNR==NR { p2c[$1]=$2; next }{print $1,$2,$3,p2c[$4],$5,$6}' %s/_peak_to_cluster %s/_orphan_merged.bed > %s/orphan_clusters.bed" % (tempdir,tempdir,tempdir)
+    cmd = "awk 'BEGIN{OFS=@\\t@}FNR==NR { p2c[$1]=$2; next }{print $1,$2,$3,p2c[$4],$5,$6}' %s/_peak_to_cluster %s/_orphan_merged.bed > %s/orphan_clusters.bed" % (tempdir,tempdir,tempdir)
     cmd = cmd.replace('@','"')
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
-        
+
     cmd = "cat %s/orphan_clusters.bed %s/_orphan_singleton.bed | awk 'NF==6' > %s" % (tempdir,tempdir,orphan_merged_bed)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
@@ -886,23 +886,6 @@ def get_median_gene_length(inputfile = None,fmt = None):
     med = np.median([x.end - x.start for x in regs])
     return(med)
 
-# subsample bam file 
-#def _subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
-#   cmd = "N=$(samtools view -@ %s -c %s);awk -v N=$N -v T=%s 'BEGIN { print  ( T / N  ) }'" % (str(threads),str(inputbam),str(nreads))
-#    if verbose > 1:
-#        print('Running:\n\t%s' % cmd)
-#    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-#    frac = ps.communicate()[0].decode("utf-8").rstrip()
-#    # subsample the bam using samtools view 
-#    
-#    cmd = "samtools view -@ %s -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
-#    if verbose> 1:
-#        print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
-#    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-#    if verbose > 1:
-#        print(ps.communicate())
-#    else:
-#        ps.communicate()
 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}'" % (str(threads),str(inputbam),str(nreads))
@@ -988,7 +971,18 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
         Ngen = int(Ngen)
         #Nigen = int(Nigen)
         Nigen = int(Nmap - Ngen)
-        return((Ntot,Nmap,Ngen,Nigen))
+        
+def count_reads(bamfile=None,bed = None,flags = '',threads=1,verbose = False):
+    # Genic reads
+    if bed:
+        cmd = "samtools view %s -@ %s -c --region %s %s" % (flags,threads,bed,bamfile)
+    else:
+        cmd = "samtools view %s -@ %s -c  %s" % (flags,threads,bamfile)
+    if verbose > 2 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    Nread = ps.communicate()[0].decode("utf-8").rstrip()
+    return(int(Nread))
 
 
 # add missing genes to the annotation file 
