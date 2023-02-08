@@ -23,7 +23,7 @@ These dependencies can be installed with `conda`:
 ```
 # create environment
 conda create -n geneext
-conda activate genext
+conda activate geneext
 # install dependencies
 conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam  
 ```

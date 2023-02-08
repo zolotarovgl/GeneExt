@@ -173,6 +173,7 @@ def estimate_mapping(tempdir = None,bamfile = None,genefile = None,infmt = None,
         return(Ntot,Nmap,Ngen,Nigen,Norph)
 
 def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None,infmt = None,threads = 1, verbose=False,orphanbed = None,onlyestimate = True):
+    statsfile = tempdir + "mapping_stats.txt"
     if onlyestimate:
         Ntot,Nmap,Ngen,Nigen,Norph = estimate_mapping(tempdir = tempdir,bamfile = bamfile,genefile = genefile,infmt = infmt,threads = threads, verbose =verbose,orphanbed = None)
         old_rep = report_stats(genefile,Ntot,Nmap,Ngen,Nigen,Norph)
@@ -184,7 +185,11 @@ def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None
         new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen,Norph)
         print(old_rep)
         print(new_rep)
-        quit()
+    with open(statsfile,'w') as ofile:
+        ofile.write(old_rep)
+        if not onlyestimate:
+            ofile.write(new_rep)
+    ofile.close()
 
     # depends on whether it was called only multple files or ont 
 
@@ -395,6 +400,8 @@ if __name__ == "__main__":
     # 3. Extend genes 
         print('======== Extending genes =======================')
         helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
+        
+    # 4. Add orphan peaks
         if do_orphan:
             print('======== Adding orphan peaks ===================')
             #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
@@ -402,9 +409,9 @@ if __name__ == "__main__":
         if do_report:
             print('======== Creating PDF report =======================')
             generate_report()
-    
+
+    # 5. Estimate intergenic mapping
         print('======== Estimating intergenic mapping =========')
-        #estimate_mapping(tempdir = tempdir,bamfile = bamfile,infmt = infmt,threads = 1, verbose = verbose
         if do_orphan:
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = tempdir + '/orphan_merged.bed',onlyestimate = False)
         else:
