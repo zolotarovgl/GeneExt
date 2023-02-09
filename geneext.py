@@ -173,7 +173,7 @@ def estimate_mapping(tempdir = None,bamfile = None,genefile = None,infmt = None,
         return(Ntot,Nmap,Ngen,Nigen,Norph)
 
 def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None,infmt = None,threads = 1, verbose=False,orphanbed = None,onlyestimate = True):
-    statsfile = tempdir + "mapping_stats.txt"
+    statsfile = tempdir + "/mapping_stats.txt"
     if onlyestimate:
         Ntot,Nmap,Ngen,Nigen,Norph = estimate_mapping(tempdir = tempdir,bamfile = bamfile,genefile = genefile,infmt = infmt,threads = threads, verbose =verbose,orphanbed = None)
         old_rep = report_stats(genefile,Ntot,Nmap,Ngen,Nigen,Norph)
