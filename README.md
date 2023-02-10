@@ -297,6 +297,7 @@ For the specified peaks you want to merge, you can manually change the `gene.id`
 - [x] add gene number reporting in gene adding function  
 - [x] add mRNA-> transcript conversion as a part of file fixing 
 - [x] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
+- [x] fork to sebelab
 - [ ] to output `crgtf` files for bed inputs  - gene, transcript, exon
 - [ ] __cellranger mock gtf__ - figure the minimal requirements the cellranger has for gtf      
 - [ ] parallelize the coverage computation step   
