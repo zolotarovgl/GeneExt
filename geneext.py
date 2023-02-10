@@ -2,10 +2,7 @@
 import argparse
 from argparse import RawTextHelpFormatter
 from geneext import helper
-
 import os
-import subprocess
-import re
 
 
 parser = argparse.ArgumentParser(description=
@@ -76,9 +73,6 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
             helper.outersect(inputbed_a = peaks_bed,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose,f = 0.0001)
         else:
             print("Don't know how to add orphan peaks!")
-
-#def add_orphan(outputfile = None,peaksbed = None,outfmt = None, verbose = verbose):
-#    helper.add_orphan_peaks(infile = outputfile,peaksbed= peaksbed,fmt = outfmt,verbose=verbose)    
 
 
 # Pipeline: orphan peaks 
@@ -239,7 +233,7 @@ if __name__ == "__main__":
     if peaksfile is None and bamfile is None:
         pipeline_error_print("Please, specify either alignment [-b] or peaks file [-p]!")
     # check output file:
-    if outputfile is None:
+    if outputfile is None and not do_estimate:
         pipeline_error_print('Please, specify the output file [-o]!')
 
     if bamfile is not None:
@@ -288,7 +282,8 @@ if __name__ == "__main__":
                     helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
                     genefile = genefilewmrna
                 else:
-                    pipeline_error_print("Can't find any transcript or mRNA features in %s!" % genefile)
+                    genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
+                    helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
             if not 'gene' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
                 genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)

@@ -32,7 +32,7 @@
 - [x] add mRNA-> transcript conversion as a part of file fixing 
 - [x] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
 - [x] fork to sebelab
-
+- [x] disable checks if `--estimate` is set
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
@@ -56,7 +56,7 @@ Extension modes
 Performance:   
 - [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
 - [ ] add extension by continuous coverage   
-- [ ] add single exon extensoin 
+- [ ] add single exon extension 
 
 Orphan peaks:  
 - [x] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   

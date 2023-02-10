@@ -1058,8 +1058,9 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                 else:
                     print('No parent found for transcript %s, where are the genes?' % feature.id)
 
-        # what if there is no gene id? 
-    #with open(outfile,'w') as ofile:
+def add_transcript_features(infile = None,outfile = None, infmt = None,verbose = False):
+    raise(NotImplementedError())
+
     
 def mRNA2transcript(infile = None,outfile = None,verbose = False):
     """In .gff/.gtf file, change the features of type 'mRNA' into 'transcript' """
