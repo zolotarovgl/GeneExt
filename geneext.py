@@ -2,10 +2,7 @@
 import argparse
 from argparse import RawTextHelpFormatter
 from geneext import helper
-
 import os
-import subprocess
-import re
 
 
 parser = argparse.ArgumentParser(description=
@@ -76,9 +73,6 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
             helper.outersect(inputbed_a = peaks_bed,inputbed_b=genefile_ext_bed,outputbed = orphan_bed,by_strand = False,verbose = verbose,f = 0.0001)
         else:
             print("Don't know how to add orphan peaks!")
-
-#def add_orphan(outputfile = None,peaksbed = None,outfmt = None, verbose = verbose):
-#    helper.add_orphan_peaks(infile = outputfile,peaksbed= peaksbed,fmt = outfmt,verbose=verbose)    
 
 
 # Pipeline: orphan peaks 
@@ -219,7 +213,7 @@ if __name__ == "__main__":
     do_mapping = False
     do_macs2 = args.b is not None  
     do_subsample = args.subsamplebam is not None
-    do_estimate = args.estimate and bamfile
+    do_estimate = args.estimate
     do_clean = not args.keep
     do_report = args.report and do_macs2
 
@@ -235,12 +229,10 @@ if __name__ == "__main__":
     print(callcmd)
     print(genefile)
     print('======== Preflight checks ======================')
+
     # parse input and output formats - run the pipeline accordingly
     if peaksfile is None and bamfile is None:
         pipeline_error_print("Please, specify either alignment [-b] or peaks file [-p]!")
-    # check output file:
-    if outputfile is None:
-        pipeline_error_print('Please, specify the output file [-o]!')
 
     if bamfile is not None:
         if os.path.isfile(bamfile):
@@ -248,23 +240,33 @@ if __name__ == "__main__":
         else:
             pipeline_error_print('Specified alignment file does not exist!')
 
-    elif peaksfile is not None:
-        if os.path.isfile(peaksfile):
-            print('Found a peaks file, skipping peak calling ...')
+    if not do_estimate:
+        # check output file:
+        if outputfile is None and not do_estimate:
+            pipeline_error_print('Please, specify the output file [-o]!')
+
+        elif peaksfile is not None:
+            if os.path.isfile(peaksfile):
+                print('Found a peaks file, skipping peak calling ...')
+            else:
+                pipeline_error_print('Specified peaks file does not exist!\nPlease, specify either a valid .bam file for macs2 or a peaks file.')
+
+        if peaksfile is not None and bamfile is not None:
+            pipeline_error_print('Please, specify either a .bam file with reads [-b] or a peaks file [-p] but not both at the same time!')
+
+        if genefile is None:
+            pipeline_error_print('Missing genome annotation file [-g]!')
+
+        elif not os.path.isfile(genefile):
+            pipeline_error_print('Genome annotation file .... DOES NOT EXIST!')
         else:
-            pipeline_error_print('Specified peaks file does not exist!\nPlease, specify either a valid .bam file for macs2 or a peaks file.')
+            print('Genome annotation file .... OK')
 
-    if peaksfile is not None and bamfile is not None:
-        pipeline_error_print('Please, specify either a .bam file with reads [-b] or a peaks file [-p] but not both at the same time!')
 
-    if genefile is None:
-        pipeline_error_print('Missing genome annotation file [-g]!')
-
-    elif not os.path.isfile(genefile):
-        pipeline_error_print('Genome annotation file .... DOES NOT EXIST!')
     else:
-        print('Genome annotation file .... OK')
-
+        # just check the bam file:
+        if bamfile is None:
+            pipeline_error_print('Can not estimate mapping without an alignment file!')
     # set temporary directory:
     if verbose > 0:
         print("Temporary directory: %s" % tempdir)
@@ -288,14 +290,14 @@ if __name__ == "__main__":
                     helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
                     genefile = genefilewmrna
                 else:
-                    pipeline_error_print("Can't find any transcript or mRNA features in %s!" % genefile)
+                    genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
+                    helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
             if not 'gene' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
                 genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
                 helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes
-
     print('Checks done.')
 
     ##################################################
