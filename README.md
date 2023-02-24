@@ -119,13 +119,15 @@ __Note:__ it may happen that you will get a lot of "orphan" peaks in your annota
 
 Missing genes may be represented by multiple orphan peaks corresponding to exonic regions. Having such peaks will lead to including highly correlated features which is undesirable for single-cell RNAseq analyses. 
 By default, `GeneExt` will try to merge such peaks by distance unless `--nomerge` is specified.  
-  
+
+![Orphan_merging](./img/orphan_merging.png)
+
 Default settings are the following:  
 * Maximum distance between the peaks - 10000  
 * Maximum size of the orphan peak cluster - 100000  
 
-
 So far, the merged peaks are represented by a single continuos region.  
+
 
 
 
