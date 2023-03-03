@@ -414,15 +414,17 @@ if __name__ == "__main__":
 
     # 5. Estimate intergenic mapping
         print('======== Estimating intergenic mapping =========')
-        if do_orphan:
-            run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = tempdir + '/orphan_merged.bed',onlyestimate = False)
+        if bamfile:
+            if do_orphan:
+                run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = tempdir + '/orphan_merged.bed',onlyestimate = False)
+            else:
+                run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = False)
         else:
-            run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = False)
-
+            print("No bamfile specified - omitting mapping estimation")
         if do_clean:
             print('======== Cleaning temporary directory ==========')
             clean_tmp(tempdir = tempdir)
-    else:
+    elif bamfile:
         print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
         run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
     print('======== Done ==================================')

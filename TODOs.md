@@ -33,6 +33,7 @@
 - [x] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
 - [x] fork to sebelab
 - [x] disable checks if `--estimate` is set
+- [ ] __coverage parallelization__
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
@@ -68,5 +69,5 @@ Orphan peaks:
 - [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
 
 Manual: 
-- [ ] add peak filtering manual        
-- [ ] add orphan peaks manual   
+- [x] add peak filtering manual        
+- [x] add orphan peaks manual   
