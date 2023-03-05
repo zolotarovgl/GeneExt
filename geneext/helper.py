@@ -420,6 +420,9 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     exit("no gene_id attribute found for gene %s! ( see the feature line above)" % feature.id)    
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
+            print(n_exons)
+            print(n_transcripts)
+            quit()
             if n_exons and feature.id in extend_dictionary.keys(): 
                 if verbose > 2:
                     print(feature.id)
@@ -467,6 +470,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
                 if extension_mode == 'new_transcript':
                     if infmt == 'gff':
+                        raise(NotImplementedError('Fix for cases where gene and mrna have the same ID!'))
                         ###### Create fictional mRNA ########
                         # change last_exon id 
                         if outfmt == 'gff':
@@ -486,15 +490,16 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                             #raise(NotImplementedError('gff-> gtf'))
                         # CAVE: mrna ranges should be also updated
                         mrna = db[mrna_id]
-                        
-                        # Write down original mRNA:
-                        if infmt == outfmt:
+                        mrna.featuretype = 'transcript' 
+                        # Add transcript ID if missing 
+                        # Write down original gene and mRNA:
+                        if outfmt == 'gff':
                             fout.write(str(feature)+'\n')
                             fout.write(str(mrna)+'\n')
                             for child_exon in db.children(mrna_id,featuretype = 'exon'):
                                 fout.write(str(child_exon)+'\n')
 
-                        elif infmt == 'gff' and outfmt == 'gtf':
+                        elif outfmt == 'gtf':
                             feature['gene_id'] = feature['ID']
                             #fout.write(replace_gff_gtf(str(feature)))
                             fout.write(str_gtf(feature)+'\n')
@@ -542,7 +547,6 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         cnt += 1
                     
                     elif infmt == 'gtf':
-
                         ###### Create fictional mRNA ########
                         # now, change the parent transcript
                         last_exon['transcript_id'] = [tag + '~'+mrna_id]
@@ -551,61 +555,46 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         last_exon['three_prime_ext'] = str(extend_dictionary[feature.id])
                         # CAVE: mrna ranges should be also updated
                         mrna = db[mrna_id]
+                        mrna.featuretype = 'transcript'
+                        # if missing transcript_id (because they are the same as genes, add manually)
+                        if not 'transcript_id' in [x for x in mrna.attributes]:
+                            mrna['transcript_id'] = mrna['gene_id']
+
+                        # Write down original gene and mRNA:
+                        if outfmt == 'gtf':
+                            fout.write(str(feature)+'\n')
+                            fout.write(str(mrna)+'\n')
+                            for child_exon in db.children(mrna_id,featuretype = 'exon'):
+                                fout.write(str(child_exon)+'\n')
+
                         mrna['three_prime_ext'] = str(extend_dictionary[feature.id])
-                        # Write down original mRNA:
-                        fout.write(str(feature)+'\n')
-                        fout.write(str(mrna)+'\n')
-                        for child_exon in db.children(mrna_id,featuretype = 'exon'):
-                            fout.write(str(child_exon)+'\n')
 
                         if mrna.strand == "+":
                             mrna.end = last_exon.end
                         elif mrna.strand == "-":
                             mrna.start = last_exon.start
+
+                        # ADD FAKE ID 
                         mrna.source = mrna.source+'~'+tag
-                        # create fictional mrnaid
-                        
-                        # if missing transcript_id (because they are the same as genes, add manually)
-                        if not 'transcript_id' in [x for x in mrna.attributes]:
-                            mrna['transcript_id'] = mrna['gene_id']
-                        mrna.id = tag + '~' + mrna.id
+                        oldmrna_id = mrna.id
+                        mrna.id = tag + '~' + oldmrna_id
                         mrna['transcript_id'][0] = mrna.id
+                        #  write down this updated mRNA:
+                        fout.write(str(mrna)+'\n')
 
                         ####### Write down the gene and extended mrna ######
-                        fout.write(str(mrna)+'\n')
                         if verbose > 2:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         cnt += 1
                         for child_exon in db.children(mrna_id,featuretype = 'exon'):
                             if not child_exon.id == last_exon.id:
                                 child_exon.source = child_exon.source + '~' + tag
+                                child_exon['transcript_id'] = mrna.id
                                 fout.write(str(child_exon)+'\n')
                         fout.write(str(last_exon) + '\n')
                 elif extension_mode == 'new_exon':
                     raise(NotImplementedError())
                     ###### Only add a fictional exon ########
-                    # change last_exon id 
-                    last_exon['ID'] = [tag + '~lastexon_'+last_exon['ID'][0]]
-                    last_exon.source = last_exon.source + '~' + tag
-                    last_exon['three_prime_ext'] = str(extend_dictionary[feature.id])
-                    
-                    mrna = db[mrna_id]
-                    mrna['three_prime_ext'] = str(extend_dictionary[feature.id])
-                    
-                    if mrna.strand == "+":
-                        mrna.end = last_exon.end
-                    elif mrna.strand == "-":
-                        mrna.start = last_exon.start
-                    ####### Write down the gene and extended mrna ######
-                    fout.write(str(feature)+'\n')
-                    fout.write(str(mrna)+'\n')
-                    if verbose > 1:
-                        print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
-                    cnt += 1
-                    for child_exon in db.children(mrna_id,featuretype = 'exon'):
-                        if not child_exon.id == last_exon.id:
-                            fout.write(str(child_exon)+'\n')
-                    fout.write(str(last_exon) + '\n')
                 elif extension_mode == 'replace_transcript':
                     raise(NotImplementedError('Implement replacing old mRNA with a new one!'))
                 else:
@@ -613,7 +602,12 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                 
                 # Write remaining transcripts per gene:
                 for transcript in db.children(feature.id,featuretype = 'transcript'): 
-                    if not transcript.id == mrna_id:
+                    if infmt == 'gtf':
+                        transcript_id = transcript['transcript_id'][0]
+                    elif infmt == 'gff':
+                        transcript_id = transcript.id
+                    
+                    if transcript_id != oldmrna_id:
                         if infmt == outfmt:
                             fout.write(str(transcript) + '\n')
                         elif infmt == 'gff' and outfmt == 'gtf':
@@ -643,7 +637,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                 if outfmt == infmt:  
                     fout.write(str(feature) + '\n') # genes and transcripts are children of themselves
                     for transcript in db.children(feature.id):
-                        if transcript.featuretype == 'transcript' or transcript.featuretype == 'mRNA':
+                        if transcript.featuretype in ['transcript','mRNA']:
                             fout.write(str(transcript) + '\n')
                             for exon in db.children(transcript.id):
                                 if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
@@ -654,7 +648,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     # remove unnecessary atributes
                     fout.write(str_gtf(feature) + '\n') # genes and transcripts are children of themselves
                     for transcript in db.children(feature.id):
-                        if transcript.featuretype == 'transcript':
+                        if transcript.featuretype in ['transcript','mRNA']:
                             transcript['gene_id'] = feature['gene_id']
                             transcript['transcript_id'] = transcript.id
                             fout.write(str_gtf(transcript) + '\n')
@@ -763,6 +757,40 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     extend = {k:[x for x in v if x[1] == min([x[1] for x in v ])][0] for k,v in extend.items()}
     extend_dictionary = {k:abs(v[1]) for k,v in extend.items()}
     # this dictionary will be the input to the extension function
+    ########################################################################################
+    # Check whether the extension intervenes into another gene
+    if verbose > 1:
+        print("Checking extensions ...")
+    upd_counter = 0
+    # for each gene extension, check if it's extension interferes with any of the genes on the same chromosome and strand.
+    for gene in genes:
+        if gene.id in extend_dictionary.keys():
+
+            genes_same_strand = [x for x in genes if x.chrom == gene.chrom and x.strand == gene.strand]
+            #if verbose > 2:
+            #    print('%s: %s genes on the same strand' % (gene.id,len(genes_same_strand)))
+            # find genes that would have been overlapped if any:
+            if gene.strand == '+':
+                overlapped = [x for x in genes_same_strand if x.start <= gene.end+extend_dictionary[gene.id] and x.start > gene.end]
+                if len(overlapped)>0:
+                    new_ext = overlapped[0].start - gene.end -1 
+                    if verbose > 2:
+                        print('FOUND downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                        print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
+                    extend_dictionary[gene.id] = new_ext
+                    upd_counter += 1
+            else:
+                overlapped = [x for x in genes_same_strand if x.end >= gene.start-extend_dictionary[gene.id] and x.end < gene.start]
+                if len(overlapped)>0:
+                    new_ext = gene.start-overlapped[0].end-1
+                    if verbose > 2:
+                        print('FOUND downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                        print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
+                    extend_dictionary[gene.id] = new_ext
+                    upd_counter +=1
+    if verbose > 1:
+        print('Updated %s extensions (to prevent extensions into downstream genes).' % upd_counter)
+    ########################################################################################
     exts = [abs(v[1]) for v in extend.values()]
     if verbose > 0:
         print('\tMaximal allowed extension: %s' % maxdist)
