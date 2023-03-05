@@ -1011,7 +1011,6 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
             geneid = feature['Parent'][0]
         t2g.update({feature.id:geneid})
     g2t = {}
-    g2t = {}
     for t,g in t2g.items():
         g2t.update({g:[t for t,v in t2g.items() if v == g]})
     with open(outfile,'w') as ofile:
