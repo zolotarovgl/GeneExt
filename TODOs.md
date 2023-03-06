@@ -34,8 +34,10 @@
 - [x] fork to sebelab
 - [x] disable checks if `--estimate` is set
 - [ ] __coverage parallelization__
-- [ ] __gene overextension on the same strand__
-- [ ] non-extended genes are not written anymore
+- [x] __gene overextension on the same strand__
+- [x] non-extended genes are not written anymore
+- [x] update mRNA ranges as well.   
+- [x] Solve the same for `.gff` inputcat 
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
