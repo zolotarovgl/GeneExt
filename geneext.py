@@ -85,7 +85,7 @@ def run_orphan():
     if do_orphan_merge:
         print('Orphan peaks: merging by distance.')
         orphan_merged_bed  = tempdir + '/' + 'orphan_merged.bed'
-        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
+        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,genic_bed = genefile_ext_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
         print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
         helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_merged_bed,fmt = outfmt,verbose=verbose,tag = tag) 
     else:

@@ -74,7 +74,7 @@ Orphan peaks:
   - [ ] splice junctions if a splice junctions file is provided  
 - [x] rename orphan peak clusters  
 - [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
-- [ ] __Bug: prevent peaks from clustering across the genes - only allow orphan peak clustering in the intergenic regions__
+- [x] __Bug: prevent peaks from clustering across the genes - only allow orphan peak clustering in the intergenic regions__
 
 
 Manual: 

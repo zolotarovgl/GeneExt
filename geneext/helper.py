@@ -70,14 +70,17 @@ def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
     """Given an input bed file with a coverage, get a coverage percentile"""
     percentile = int(percentile)
-    if verbose > 0:
+    if percentile > 0:
+        if verbose > 0:
                 print('Getting a %s-th percentile ...' % percentile)
-    cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
-    if verbose > 1:
-        print('Running:\n\t%s' % cmd)
-    ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    out = ps.communicate()[0].decode("utf-8").rstrip()
-    return(out)
+        cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
+        if verbose > 1:
+            print('Running:\n\t%s' % cmd)
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        out = ps.communicate()[0].decode("utf-8").rstrip()
+        return(out)
+    else:
+        return('0')
 
 
 def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbose = False):
@@ -876,7 +879,7 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
 
 
 
-def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = None,maxsize = None,maxdist = None,verbose = False):
+def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,genic_bed = None,tempdir = None,maxsize = None,maxdist = None,verbose = False):
     """This function merges orphan peaks by distance"""
     pref = 'Orphan merging: '
     #maxsize = 100000 # maximum size of a peak cluster 
@@ -887,6 +890,14 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,tempdir = N
         print('Maximum distance: %s; Maximum cluster size: %s' % (maxdist,maxsize))
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    # Outersect the clusters with genes:
+    cmd = "bedtools intersect -a %s/_orphan_merged.bed -b %s -v > %s/_orphan_merged_nov.bed; mv %s/_orphan_merged_nov.bed %s/_orphan_merged.bed" % (tempdir,genic_bed,tempdir,tempdir,tempdir)
+    
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
     # rename orphan clusters:
     cmd = "awk '{print  $4@\\tpeak.cl@NR}' %s/_orphan_merged.bed > %s/_peak_to_cluster" % (tempdir,tempdir)
     cmd = cmd.replace('@','"')
