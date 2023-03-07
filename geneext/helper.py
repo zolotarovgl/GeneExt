@@ -510,10 +510,11 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                             mrna['gene_id'] = mrna['Parent']
                             mrna['transcript_id'] = mrna['ID']
                             fout.write(str_gtf(mrna)+'\n')
-                            for exon in db.children(mrna_id,featuretype = 'exon'):
+                            for exon in db.children(mrna_id,featuretype = ['exon','CDS']):
                                 exon['gene_id'] = mrna['gene_id']
                                 exon['transcript_id'] = mrna['transcript_id']
                                 fout.write(str_gtf(exon)+'\n')
+                     
                         else:
                             print('Dont know how to write an output')
 
@@ -567,7 +568,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         if outfmt == 'gtf':
                             fout.write(str(feature)+'\n')
                             fout.write(str(mrna)+'\n')
-                            for child_exon in db.children(mrna_id,featuretype = 'exon'):
+                            for child_exon in db.children(mrna_id,featuretype = ['exon','CDS']):
                                 fout.write(str(child_exon)+'\n')
 
                         if mrna.strand == "+":
@@ -580,9 +581,10 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         mrna['three_prime_ext'] = str(extend_dictionary[feature.id])
 
                         # ADD FAKE ID 
-                        
                         mrna['transcript_id'] = tag + '~' + mrna_id
-                        mrna['gene_id'] = mrna_id
+
+                        if not 'gene_id' in mrna.attributes:
+                            mrna['gene_id'] = mrna_id
                         mrna.source = mrna.source + "~" + tag
                         #  write down this updated mRNA:
                         fout.write(str(mrna)+'\n')
@@ -636,18 +638,23 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
             
             ######### Write the gene to the file as is ############
+            # CAVE: what to do here?
             elif not feature.id in extend_dictionary.keys(): # write the gene and all children as they are in the file:
                 #if verbose:
                 #    print("%s shoudn't be extended - omitting..." % feature.id)
                 if outfmt == infmt:  
                     fout.write(str(feature) + '\n') # genes and transcripts are children of themselves
-                    for transcript in db.children(feature.id):
-                        if transcript.featuretype in ['transcript','mRNA']:
-                            fout.write(str(transcript) + '\n')
-                            for exon in db.children(transcript.id):
-                                if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
-                                # write down the exon
-                                    fout.write(str(exon) + '\n')  
+                    for transcript in db.children(feature.id,featuretype = ['transcript','mRNA']):
+                        fout.write(str(transcript) + '\n') 
+                        for exon in db.children(transcript.id):
+                            if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
+                            # write down the exon
+                                fout.write(str(exon) + '\n')  
+                    # If exons are found as children of a gene, write them down - to accommondate the cases of the same IDs in genes and transcripts
+                    for exon in db.children(feature.id):
+                        if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
+                        # write down the exon
+                            fout.write(str(exon) + '\n') 
                 elif outfmt == 'gtf' and infmt == 'gff':
                     feature['gene_id'] = feature['ID']
                     # remove unnecessary atributes
@@ -664,6 +671,13 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                                 if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
                                 # write down the exon
                                     fout.write(str_gtf(exon) + '\n')  
+                    # If exons are found as children of a gene, write them down - to accommondate the cases of the same IDs in genes and transcripts
+                    for exon in db.children(feature.id):
+                        exon['gene_id'] = feature.id
+                        exon['transcript_id'] = feature.id
+                        if exon.featuretype in ['exon','CDS','start_codon','stop_codon']:
+                        # write down the exon
+                            fout.write(str_gtf(exon) + '\n') 
                 else:
                     raise(NotImplementedError())           
             else:

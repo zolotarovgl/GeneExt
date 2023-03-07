@@ -37,7 +37,10 @@
 - [x] __gene overextension on the same strand__
 - [x] non-extended genes are not written anymore
 - [x] update mRNA ranges as well.   
-- [x] Solve the same for `.gff` inputcat 
+- [x] Solve the same for `.gff` inputcat
+- [ ] cellranger - problem with AS-overlapping genes counting 
+- [ ] solve missing CDS features 
+- [ ] clipped extensions should be written down
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
@@ -59,7 +62,7 @@ Extension modes
 - [ ] replace exon  
 
 Performance:   
-- [ ] try out `gffread` standardized output files, make sure it's comptabible (can be accepted by genext)     
+- [ ] try out `gffread` standardized output files, make sure it's compatible (can be accepted by genext)     
 - [ ] add extension by continuous coverage   
 - [ ] add single exon extension 
 
@@ -71,6 +74,8 @@ Orphan peaks:
   - [ ] splice junctions if a splice junctions file is provided  
 - [x] rename orphan peak clusters  
 - [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
+- [ ] __Bug: prevent peaks from clustering across the genes - only allow orphan peak clustering in the intergenic regions__
+
 
 Manual: 
 - [x] add peak filtering manual        
