@@ -38,11 +38,13 @@
 - [x] update mRNA ranges as well.   
 - [x] Solve the same for `.gff` inputcat  
 - [x] solve missing CDS features 
-- [ ] cellranger - problem with AS-overlapping genes counting 
-- [ ] clipped extensions should be written down
+- [x] clipped extensions should be written down
 - [ ] __coverage parallelization__
-- [ ] convert from system bedtools execution to pybedtools  
+- [ ] cellranger - problem with AS-overlapping genes counting 
 - [ ] __overlapping exons chopping__
+- [x] exons from an artificial transcript should have their transcriptIDs updated as well   
+- [ ] __clip antisense extensions if extended into another gene__  
+
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
