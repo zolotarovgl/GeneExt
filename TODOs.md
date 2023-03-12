@@ -33,14 +33,16 @@
 - [x] __add orphan peak mapping rate estimation separately (otherwise, doesn't make much sense)__
 - [x] fork to sebelab
 - [x] disable checks if `--estimate` is set
-- [ ] __coverage parallelization__
 - [x] __gene overextension on the same strand__
 - [x] non-extended genes are not written anymore
 - [x] update mRNA ranges as well.   
-- [x] Solve the same for `.gff` inputcat
+- [x] Solve the same for `.gff` inputcat  
+- [x] solve missing CDS features 
 - [ ] cellranger - problem with AS-overlapping genes counting 
-- [ ] solve missing CDS features 
 - [ ] clipped extensions should be written down
+- [ ] __coverage parallelization__
+- [ ] convert from system bedtools execution to pybedtools  
+- [ ] __overlapping exons chopping__
 
 Input annotation fixes:  
 - [ ] add adding missing transcript features if missing   
@@ -48,7 +50,6 @@ Input annotation fixes:
 Minimal cellranger output:  
 - [ ] to output `crgtf` files for bed inputs  - gene, transcript, exon
 - [ ] parallelize the coverage computation step    
-
 
 Reporting:
 - [ ] fix report path error when called outside of the directory   
@@ -64,7 +65,6 @@ Extension modes
 Performance:   
 - [ ] try out `gffread` standardized output files, make sure it's compatible (can be accepted by genext)     
 - [ ] add extension by continuous coverage   
-- [ ] add single exon extension 
 
 Orphan peaks:  
 - [x] `helper.add_orphan` should be split into getting the orphan peaks and adding them to allow for __peak merging__ if requested   
@@ -75,7 +75,7 @@ Orphan peaks:
 - [x] rename orphan peak clusters  
 - [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
 - [x] __Bug: prevent peaks from clustering across the genes - only allow orphan peak clustering in the intergenic regions__
-
+- [ ] Rename the peaks: UTOs -> Unknown Transcribed Objects, UTS Unknown/Unidentified Transcribed Segments
 
 Manual: 
 - [x] add peak filtering manual        

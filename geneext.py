@@ -19,7 +19,7 @@ parser.add_argument('-m', default = None, help = 'Maximal distance for gene exte
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = str('tmp'), help = 'Temporary directory. [tmp]')
-parser.add_argument('-tag', default = str('GE'), help = 'Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]')
+parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]')
 parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
