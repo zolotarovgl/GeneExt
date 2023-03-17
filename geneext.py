@@ -23,6 +23,7 @@ parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to
 parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
+parser.add_argument('--overplap_clipping_mode',default = 'clip_sense',help = 'How to treat gene extension overlaps.\nclip_sense - default, restrict overlaps into downstream genes on the same strand\nclip_both - restrict overlaps regardless of the strand.')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
 parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')

@@ -43,7 +43,9 @@
 - [ ] cellranger - problem with AS-overlapping genes counting 
 - [ ] __overlapping exons chopping__
 - [x] exons from an artificial transcript should have their transcriptIDs updated as well   
-- [ ] __clip antisense extensions if extended into another gene__  
+- [ ] __clip antisense extensions if extended into another gene__  - maybe by introducing 2 exon clipping modes?
+- [ ] overlaps on the 5' end - assign these to the genes as well - will require 5' extension as well or simply filter them out.  
+- [ ] 5' extension?  
 
 
 Input annotation fixes:  
@@ -75,7 +77,8 @@ Orphan peaks:
   - [x] simple distance merging     
   - [ ] splice junctions if a splice junctions file is provided  
 - [x] rename orphan peak clusters  
-- [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges   
+- [ ] add proper orphan peak linkage - e.g. into the transcripts not full ranges:
+  - [ ] linked orphan peaks should represent exons belonging to the transcript cluster.
 - [x] __Bug: prevent peaks from clustering across the genes - only allow orphan peak clustering in the intergenic regions__
 - [ ] Rename the peaks: UTOs -> Unknown Transcribed Objects, UTS Unknown/Unidentified Transcribed Segments
 
