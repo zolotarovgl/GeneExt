@@ -3,6 +3,9 @@ import os
 import re
 import numpy as np
 import gffutils
+import pysam
+import multiprocessing
+from functools import partial
 
 # macs2_helper
 
@@ -52,20 +55,38 @@ def index_bam(infile,verbose = False,threads = 1):
     os.system(cmd)
 
 # Coverage functions   
-
-def get_coverage(inputbed_a = None,input_bam = None,outputfile = None,verbose = False,mean = True):
-    """Computes bed coverage. If specified, can also compute mean coverage"""
-    import pysam
+def count_reads_in_region(region, input_bam):
     aln = pysam.AlignmentFile(input_bam, "rb")
-    bed = parse_bed(inputbed_a) 
-    with open(outputfile,'w') as fout:
-        for i,reg in enumerate(bed):
-            if verbose > 1 and i % 10000 == 0:
-                print('coverage: %s/%s regions done' % (i,len(bed)))
-            read_count = aln.count(contig=reg.chrom, start=reg.start, stop=reg.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
-            if mean:
-                read_count = read_count/(reg.end - reg.start)
-            fout.write("\t".join([reg.chrom,str(reg.start),str(reg.end),reg.id,'0',reg.strand,str(read_count)])+ "\n")
+    read_count = aln.count(contig=region.chrom, start=region.start, stop=region.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
+    return read_count
+
+def compute_mean_coverage(region, input_bam):
+    aln = pysam.AlignmentFile(input_bam, "rb")
+    read_count = aln.count(contig=region.chrom, start=region.start, stop=region.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
+    mean_coverage = read_count / (region.end - region.start)
+    return mean_coverage
+
+def process_region(region, input_bam, mean):
+    if mean:
+        read_count = compute_mean_coverage(region, input_bam)
+    else:
+        read_count = count_reads_in_region(region, input_bam)
+    return (region, read_count)
+
+def get_coverage(inputbed_a=None, input_bam=None, outputfile=None, verbose=False, mean=True,threads = 1):
+    bed = parse_bed(inputbed_a)
+    if verbose > 1:
+        print('Computing coverage with %s threads...' % str(threads))
+    with multiprocessing.Pool(threads) as pool:
+        if mean:
+            func = partial(process_region, input_bam=input_bam, mean=True)
+        else:
+            func = partial(process_region, input_bam=input_bam, mean=False)
+        results = pool.map(func, bed)
+    with open(outputfile, 'w') as fout:
+        for region, read_count in results:
+            fout.write("\t".join([region.chrom, str(region.start), str(region.end), region.id, '0', region.strand, str(read_count)]) + "\n")
+
 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
     """Given an input bed file with a coverage, get a coverage percentile"""

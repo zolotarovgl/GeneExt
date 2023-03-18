@@ -203,7 +203,7 @@ if __name__ == "__main__":
     outputfile = args.o
     maxdist = args.m
     extension_mode = args.e
-    threads = args.j
+    threads = int(args.j)
     tag = args.tag
     clip_mode = args.clip_mode
 
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
 
     # Clipping 5'-overlaps 
-    do_5clip = True
+    do_5clip = False
 
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
@@ -304,8 +304,8 @@ if __name__ == "__main__":
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes
         # Fix 5'overlaps 
-        if do_5clip:
-            raise(NotImplementedError())
+    if do_5clip:
+        raise(NotImplementedError())
     print('Checks done.')
 
     ##################################################
@@ -374,7 +374,7 @@ if __name__ == "__main__":
                 helper.index_bam(bamfile,verbose = verbose,threads=threads)
             if verbose > 0:
                 print('Computing coverage ...')
-            helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage)
+            helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage,threads = threads)
             # get the peaks overlapping genes:
             if verbose > 0:
                 print('Getting genic peaks ...')
