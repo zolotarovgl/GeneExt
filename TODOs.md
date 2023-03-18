@@ -39,13 +39,12 @@
 - [x] Solve the same for `.gff` inputcat  
 - [x] solve missing CDS features 
 - [x] clipped extensions should be written down
-- [ ] __coverage parallelization__
-- [ ] cellranger - problem with AS-overlapping genes counting 
-- [ ] __overlapping exons chopping__
-- [x] exons from an artificial transcript should have their transcriptIDs updated as well   
+- [x] exons from an artificial transcript should have their transcriptIDs updated as well 
+- [ ] __coverage parallelization__  
 - [ ] __clip antisense extensions if extended into another gene__  - maybe by introducing 2 exon clipping modes?
 - [ ] overlaps on the 5' end - assign these to the genes as well - will require 5' extension as well or simply filter them out.  
 - [ ] 5' extension?  
+- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 
 
 Input annotation fixes:  
@@ -85,3 +84,4 @@ Orphan peaks:
 Manual: 
 - [x] add peak filtering manual        
 - [x] add orphan peaks manual   
+- [ ] add the section covering gene overlaps  

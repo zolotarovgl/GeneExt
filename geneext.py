@@ -23,7 +23,7 @@ parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to
 parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
-parser.add_argument('--overplap_clipping_mode',default = 'clip_sense',help = 'How to treat gene extension overlaps.\nclip_sense - default, restrict overlaps into downstream genes on the same strand\nclip_both - restrict overlaps regardless of the strand.')
+parser.add_argument('--clip_mode',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
 parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
@@ -205,6 +205,7 @@ if __name__ == "__main__":
     extension_mode = args.e
     threads = args.j
     tag = args.tag
+    clip_mode = args.clip_mode
 
     # peak coverage percentile:
     mean_coverage = args.mean_coverage
@@ -224,6 +225,9 @@ if __name__ == "__main__":
     # Orphan merging defaults:
     orphan_maximum_distance =int(args.orphan_maxdist)
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
+
+    # Clipping 5'-overlaps 
+    do_5clip = True
 
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
@@ -299,6 +303,9 @@ if __name__ == "__main__":
                 helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes
+        # Fix 5'overlaps 
+        if do_5clip:
+            raise(NotImplementedError())
     print('Checks done.')
 
     ##################################################
@@ -402,7 +409,7 @@ if __name__ == "__main__":
 
     # 3. Extend genes 
         print('======== Extending genes =======================')
-        helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag)
+        helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag,clip_mode = clip_mode)
         
     # 4. Add orphan peaks
         if do_orphan:

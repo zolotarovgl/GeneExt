@@ -708,7 +708,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 #    raise(NotImplementedError('Extension is not yet available for .gff files!'))
 
 # Gene extension function 
-def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_type,infmt=None,outfmt=None,tag = 'ext'):
+def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_type,infmt=None,outfmt=None,tag = None,clip_mode = None):
     # files with extensions:
     extension_table = temp_dir + '/extensions.tsv'
     #extension_bed = temp_dir + '/extensions.bed'
@@ -797,37 +797,54 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     extend = {k:[x for x in v if x[1] == min([x[1] for x in v ])][0] for k,v in extend.items()}
     extend_dictionary = {k:abs(v[1]) for k,v in extend.items()}
     # this dictionary will be the input to the extension function
-    ########################################################################################
+    #################################### Clip gene extensions overlapping other genes ####################################################
     # Check whether the extension intervenes into another gene
     if verbose > 1:
         print("Checking extensions ...")
     upd_counter = 0
     # for each gene extension, check if it's extension interferes with any of the genes on the same chromosome and strand.
+    # Drop extensions for the genes already overlapping other genes. 
     for gene in genes:
         if gene.id in extend_dictionary.keys():
-
-            genes_same_strand = [x for x in genes if x.chrom == gene.chrom and x.strand == gene.strand]
-            #if verbose > 2:
-            #    print('%s: %s genes on the same strand' % (gene.id,len(genes_same_strand)))
-            # find genes that would have been overlapped if any:
+            # Screen for gene overlaps - remove the genes from extension if overlapping other genes regardless of the strand 
             if gene.strand == '+':
-                overlapped = [x for x in genes_same_strand if x.start <= gene.end+extend_dictionary[gene.id] and x.start > gene.end]
-                if len(overlapped)>0:
-                    new_ext = overlapped[0].start - gene.end -1 
-                    if verbose > 2:
-                        print('FOUND downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
-                        print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
-                    extend_dictionary[gene.id] = new_ext
-                    upd_counter += 1
+                overlapped = [x for x in genes if x.start <= gene.end and x.end  > gene.end and x.chrom == gene.chrom]
+            elif gene.strand == '-':
+                overlapped = [x for x in genes if x.end >= gene.start and x.end < gene.start and x.chrom == gene.chrom]
+            if len(overlapped)>0:
+                if verbose > 2:
+                    print('%s overlaps the genes: %s' % (gene.id,','.join([x.id for x in overlapped])))
+                    del extend_dictionary[gene.id]      
             else:
-                overlapped = [x for x in genes_same_strand if x.end >= gene.start-extend_dictionary[gene.id] and x.end < gene.start]
-                if len(overlapped)>0:
-                    new_ext = gene.start-overlapped[0].end-1
-                    if verbose > 2:
-                        print('FOUND downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
-                        print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
-                    extend_dictionary[gene.id] = new_ext
-                    upd_counter +=1
+                # get the list of genes to consider for extension clipping:
+                if clip_mode == 'sense':
+                    genes_consider = [x for x in genes if x.chrom == gene.chrom and x.strand == gene.strand]
+                elif clip_mode == 'both':
+                    genes_consider = [x for x in genes if x.chrom == gene.chrom]
+                else:
+                    raise(ValueError('Unknown extension format'))
+                #if verbose > 2:
+                #    print('%s: %s genes on the same strand' % (gene.id,len(genes_same_strand)))
+                # How to treat the genes that are also in the extension dictionary? 
+                # find genes that would have been overlapped if any:
+                if gene.strand == '+':
+                    overlapped = [x for x in genes_consider if x.start <= gene.end+extend_dictionary[gene.id] and x.start > gene.end]
+                    if len(overlapped)>0:
+                        new_ext = overlapped[0].start - gene.end -1 
+                        if verbose > 2:
+                            print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                            print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
+                        extend_dictionary[gene.id] = new_ext
+                        upd_counter += 1
+                else:
+                    overlapped = [x for x in genes_consider if x.end >= gene.start-extend_dictionary[gene.id] and x.end < gene.start]
+                    if len(overlapped)>0:
+                        new_ext = gene.start-overlapped[0].end-1
+                        if verbose > 2:
+                            print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                            print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
+                        extend_dictionary[gene.id] = new_ext
+                        upd_counter +=1
     if verbose > 1:
         print('Updated %s extensions (to prevent extensions into downstream genes).' % upd_counter)
     ########################################################################################
