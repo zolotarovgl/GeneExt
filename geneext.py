@@ -189,6 +189,8 @@ def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None
     # depends on whether it was called only multple files or ont 
 
 
+
+
 ########### Main #####################
 ######################################
 
@@ -227,7 +229,7 @@ if __name__ == "__main__":
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
 
     # Clipping 5'-overlaps 
-    do_5clip = False
+    do_5clip = True
 
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
@@ -290,22 +292,38 @@ if __name__ == "__main__":
             if not 'transcript' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
                 if 'mRNA' in features:
-                    genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
+                    fpref = genefile.split('/')[-1].split('.')[0]
+                    fext = genefile.split('/')[-1].split('.')[1]
+                    genefilewmrna = tempdir + '/' + fpref + '_mRNA2transcript.' + fext
+                    #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
                     print('Found "mRNA" features - renaming as transcripts ...')
                     helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
                     genefile = genefilewmrna
                 else:
-                    genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
+                    fpref = genefile.split('/')[-1].split('.')[0]
+                    fext = genefile.split('/')[-1].split('.')[1]
+                    genefilewmrna = tempdir + '/' + fpref + '_addtranscripts.' + fext
+                    #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
                     helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
             if not 'gene' in features:
                 print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-                genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
+                fpref = genefile.split('/')[-1].split('.')[0]
+                fext = genefile.split('/')[-1].split('.')[1]
+                genefilewgenes = tempdir + '/' + fpref + '_addgenes.' + fext
+                #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
                 helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
                 print('Fix done, annotation with gene features: %s' % genefilewgenes )
                 genefile = genefilewgenes
         # Fix 5'overlaps 
     if do_5clip:
-        raise(NotImplementedError())
+        print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
+        # rename the file properl y
+        fpref = genefile.split('/')[-1].split('.')[0]
+        fext = genefile.split('/')[-1].split('.')[1]
+        genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
+        helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
+        print('%s -> %s' % (genefile,genefile5clip))
+        genefile = genefile5clip
     print('Checks done.')
 
     ##################################################

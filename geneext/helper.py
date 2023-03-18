@@ -1182,3 +1182,133 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
     if verbose > 1:
         print('Running: %s' % cmd)
     os.system(cmd)
+
+
+######################### 5' clipping ########################################
+def check_overlap(a,b):
+    # check 5' overlap for 2 features
+    if a.strand != b.strand or a.chrom != b.chrom:
+        return(False)
+    else:
+        if a.end < b.start:
+            return(False)
+        elif a.start > b.end:
+            return(False)
+        else:
+            if a.start < b.start and a.end < b.end:
+                if a.strand == '+':
+                    return('3')
+                else:
+                    return('5')
+            elif a.start <= b.start and a.end > b.end:
+                return('full_a')
+            elif a.start >= b.start and a.end <= b.end:
+                return('full_b')
+            elif a.start > b.start and a.end > b.end:
+                if a.strand == '+':
+                    return('5')
+                else:
+                    return('3')
+            else:
+                return(False)
+
+
+def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
+    overlapped_genes = [x for x in genes if check_overlap(gene, x) == "5"]
+    if len(overlapped_genes) > 0:
+        overlapped_genes = [x for x in genes if check_overlap(gene, x) == "5"]
+        ovgene = db[overlapped_genes[0].id]
+        if verbose > 2:
+            print("Found 5' overlap %s -> %s" % (ovgene.id, gene.id))
+        # the gene should be clipped
+        if gene.strand == "+":
+            new_start = ovgene.end + 1
+            gene.start = new_start
+        else:
+            new_end = ovgene.start - 1
+            gene.end = new_end
+        gene_range = [gene.start, gene.end]
+        gene.source = gene.source + tag
+        outstr = str(gene) + '\n'
+        for child in db.children(db[gene.id]):
+            if not child.featuretype == 'gene':
+                # remove child features outside of the new range:
+                if (not child.end < gene_range[0]) or (not child.start > gene_range[1]): 
+                    overlap_type = check_overlap(child,ovgene)
+                    if not overlap_type == 'full_b':   
+                        if gene.strand == '+' and overlap_type == '5':
+                            # modify start
+                            child.start = new_start
+                        elif gene.strand == '-' and overlap_type == '5':
+                                child.end = new_end
+                        child.source = child.source + tag
+                        outstr = outstr + str(child)+'\n'
+                    else:
+                        print('Child feature is fully contained within a downstream gene - OMITTING:\n%s\n%s' % (str(child),str(ovgene)))
+                else:
+                    print('Child is outside of the new gene range\n%s\n%s' % (str(child),str(gene)))
+        return(outstr)
+    else:
+        outstr = str(gene) + '\n'
+        for child in db.children(db[gene.id]):
+            if not child.featuretype == 'gene':
+                outstr = outstr + str(child) + '\n'
+        return(outstr)
+        
+
+
+def worker_process(genes, infile, i, results,verbose,tag):
+    db = gffutils.create_db(
+        infile,
+        ":memory:",
+        disable_infer_genes=True,
+        disable_infer_transcripts=True,
+        merge_strategy="create_unique",
+    )
+    result = []
+    for gene in genes:
+        result = result + [process_gene(gene, genes, db,verbose,tag)]
+        results[i] = result
+
+
+def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = '_5clip'):
+    # Load the database
+    if verbose > 1:
+        print('Loading gene database.')
+    db = gffutils.create_db(
+        infile,
+        ":memory:",
+        disable_infer_genes=True,
+        disable_infer_transcripts=True,
+        merge_strategy="create_unique",
+    )
+    genes = [x for x in db.features_of_type("gene")]
+    print("%s genes loaded." % len(genes))
+
+
+    # Split the genes into chunks for each worker process
+    chunk_size = len(genes) // threads
+    chunks = [genes[i:i+chunk_size] for i in range(0, len(genes), chunk_size)]
+
+    # Create a list to hold the results from each worker process
+    manager = multiprocessing.Manager()
+    results = manager.list([[] for _ in range(threads)])
+
+    # Start the worker processes
+    processes = []
+    for i in range(threads):
+        p = multiprocessing.Process(target=worker_process, args=(chunks[i], infile, i, results,verbose,tag))
+        p.start()
+        processes.append(p)
+
+    # Wait for the worker processes to finish
+    for p in processes:
+        p.join()
+    # Combine the results from all the worker processes
+    final_results = results
+    # Write the final results to the output file
+    with open(outfile, "w") as outf:
+        for result in final_results:
+            outf.write(''.join(result))
+
+    
