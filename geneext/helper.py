@@ -1244,9 +1244,13 @@ def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
                         child.source = child.source + tag
                         outstr = outstr + str(child)+'\n'
                     else:
-                        print('Child feature is fully contained within a downstream gene - OMITTING:\n%s\n%s' % (str(child),str(ovgene)))
+                        if verbose > 2:
+                            print('Child feature is fully contained within a downstream gene - OMITTING:\n%s\n%s' % (str(child),str(ovgene)))
+                        pass
                 else:
-                    print('Child is outside of the new gene range\n%s\n%s' % (str(child),str(gene)))
+                    if verbose > 2:
+                        print('Child is outside of the new gene range\n%s\n%s' % (str(child),str(gene)))
+                    pass
         return(outstr)
     else:
         outstr = str(gene) + '\n'
@@ -1254,7 +1258,6 @@ def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
             if not child.featuretype == 'gene':
                 outstr = outstr + str(child) + '\n'
         return(outstr)
-        
 
 
 def worker_process(genes, infile, i, results,verbose,tag):
@@ -1265,10 +1268,16 @@ def worker_process(genes, infile, i, results,verbose,tag):
         disable_infer_transcripts=True,
         merge_strategy="create_unique",
     )
+    all_genes = [x for x in db.features_of_type("gene")]
+    if verbose > 2:
+        print('process %s: total number of genes %s' % (i,len(all_genes)))
+        print('process %s: number of genes in chunk %s' % (i,len(genes)))
     result = []
+    
     for gene in genes:
-        result = result + [process_gene(gene, genes, db,verbose,tag)]
-        results[i] = result
+        result = result + [process_gene(gene, all_genes, db,verbose,tag)]
+    # update the results vector
+    results[i] = result
 
 
 def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = '_5clip'):
@@ -1284,12 +1293,12 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
     )
     genes = [x for x in db.features_of_type("gene")]
     print("%s genes loaded." % len(genes))
-
-
     # Split the genes into chunks for each worker process
-    chunk_size = len(genes) // threads
-    chunks = [genes[i:i+chunk_size] for i in range(0, len(genes), chunk_size)]
-
+    import math
+    
+    chunk_size = math.floor(len(genes)/threads)
+    chunks = [genes[i*(chunk_size):(i+1)*chunk_size] for i in range(0,threads-1)]
+    chunks = chunks + [genes[sum([len(x) for x in chunks]):]]  
     # Create a list to hold the results from each worker process
     manager = multiprocessing.Manager()
     results = manager.list([[] for _ in range(threads)])
@@ -1301,14 +1310,16 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
         p.start()
         processes.append(p)
 
+    
     # Wait for the worker processes to finish
     for p in processes:
         p.join()
+
     # Combine the results from all the worker processes
     final_results = results
+
     # Write the final results to the output file
     with open(outfile, "w") as outf:
         for result in final_results:
             outf.write(''.join(result))
-
     

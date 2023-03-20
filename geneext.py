@@ -220,6 +220,7 @@ if __name__ == "__main__":
     do_estimate = args.estimate
     do_clean = not args.keep
     do_report = args.report and do_macs2
+    do_fix_only = True
 
     do_orphan = args.orphan
     do_orphan_merge =  do_orphan and not args.nomerge
@@ -235,17 +236,23 @@ if __name__ == "__main__":
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
     print(callcmd)
     print(genefile)
+
+    # If fix_only set - report only doing genome annotation fixes:
+    if do_fix_only:
+        print('================================================')
+        print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.g))
     print('======== Preflight checks ======================')
 
-    # parse input and output formats - run the pipeline accordingly
-    if peaksfile is None and bamfile is None:
-        pipeline_error_print("Please, specify either alignment [-b] or peaks file [-p]!")
+    if not do_fix_only:
+        # parse input and output formats - run the pipeline accordingly
+        if peaksfile is None and bamfile is None:
+            pipeline_error_print("Please, specify either alignment [-b] or peaks file [-p]!")
 
-    if bamfile is not None:
-        if os.path.isfile(bamfile):
-            print('Alighment file ... OK')
-        else:
-            pipeline_error_print('Specified alignment file does not exist!')
+        if bamfile is not None:
+            if os.path.isfile(bamfile):
+                print('Alighment file ... OK')
+            else:
+                pipeline_error_print('Specified alignment file does not exist!')
 
     if not do_estimate:
         # check output file:
@@ -283,177 +290,180 @@ if __name__ == "__main__":
                 print('Directory created: %s' % tempdir)
     else:
         print('Temporary directory exists. Overwriting!')
+    
     infmt,outfmt = parse_input_output_formats()
     if not infmt in ['bed','gff','gtf']:
         pipeline_error_print('Unknown input format!')
     # Check and fix the input file
-    if infmt in ['gff','gtf']:
-            features = helper.get_featuretypes(genefile)
-            if not 'transcript' in features:
-                print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-                if 'mRNA' in features:
-                    fpref = genefile.split('/')[-1].split('.')[0]
-                    fext = genefile.split('/')[-1].split('.')[1]
-                    genefilewmrna = tempdir + '/' + fpref + '_mRNA2transcript.' + fext
-                    #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
-                    print('Found "mRNA" features - renaming as transcripts ...')
-                    helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
-                    genefile = genefilewmrna
-                else:
-                    fpref = genefile.split('/')[-1].split('.')[0]
-                    fext = genefile.split('/')[-1].split('.')[1]
-                    genefilewmrna = tempdir + '/' + fpref + '_addtranscripts.' + fext
-                    #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
-                    helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
-            if not 'gene' in features:
-                print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+    elif infmt in ['gff','gtf']:
+        features = helper.get_featuretypes(genefile)
+        if not 'transcript' in features:
+            print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+            if 'mRNA' in features:
                 fpref = genefile.split('/')[-1].split('.')[0]
                 fext = genefile.split('/')[-1].split('.')[1]
-                genefilewgenes = tempdir + '/' + fpref + '_addgenes.' + fext
-                #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
-                helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
-                print('Fix done, annotation with gene features: %s' % genefilewgenes )
-                genefile = genefilewgenes
+                genefilewmrna = tempdir + '/' + fpref + '_mRNA2transcript.' + fext
+                #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
+                print('Found "mRNA" features - renaming as transcripts ...')
+                helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
+                genefile = genefilewmrna
+            else:
+                fpref = genefile.split('/')[-1].split('.')[0]
+                fext = genefile.split('/')[-1].split('.')[1]
+                genefilewmrna = tempdir + '/' + fpref + '_addtranscripts.' + fext
+                #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
+                helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
+        if not 'gene' in features:
+            print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+            fpref = genefile.split('/')[-1].split('.')[0]
+            fext = genefile.split('/')[-1].split('.')[1]
+            genefilewgenes = tempdir + '/' + fpref + '_addgenes.' + fext
+            #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
+            helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
+            print('Fix done, annotation with gene features: %s' % genefilewgenes )
+            genefile = genefilewgenes
         # Fix 5'overlaps 
-    if do_5clip:
-        print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
-        # rename the file properl y
-        fpref = genefile.split('/')[-1].split('.')[0]
-        fext = genefile.split('/')[-1].split('.')[1]
-        genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
-        helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
-        print('%s -> %s' % (genefile,genefile5clip))
-        genefile = genefile5clip
+        if do_5clip:
+            print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
+            # rename the file properl y
+            fpref = genefile.split('/')[-1].split('.')[0]
+            fext = genefile.split('/')[-1].split('.')[1]
+            genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
+            helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
+            print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,genefile5clip))
+            genefile = genefile5clip
+            quit()
     print('Checks done.')
 
     ##################################################
-    # parse input file format: 
-    if not do_estimate:    
-        # if -m is not set, get a median gene size:
-        if not maxdist:
-            maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
-            if verbose:
-                print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
-        # if maximum size for orphan peak is not set, set it to the median gene size:
-        if do_orphan_merge:
-            if not orphan_maximum_size:
-                orphan_maximum_size = 2 * helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
-        if verbose > 0:
-            print('Checks done.')
+    if not do_fix_only:
+        # parse input file format: 
+        if not do_estimate:    
+            # if -m is not set, get a median gene size:
+            if not maxdist:
+                maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
+                if verbose:
+                    print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
+            # if maximum size for orphan peak is not set, set it to the median gene size:
+            if do_orphan_merge:
+                if not orphan_maximum_size:
+                    orphan_maximum_size = 2 * helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
+            if verbose > 0:
+                print('Checks done.')
 
-    # 0. MAPPING - not implemented     
-        if do_mapping:
-            print('======== Running mapping =======================')
-            raise(NotImplementedError())
-    # 0.1 BAM SUBSAMPLING  
-        if do_subsample:
-            print('======== Running subsampling ===================')
-            subsampled_bam = tempdir + '/subsampled.bam' 
-            nsubs = int(args.subsamplebam)
-            if bamfile:
-                if not os.path.isfile(bamfile + '.bai'):
+        # 0. MAPPING - not implemented     
+            if do_mapping:
+                print('======== Running mapping =======================')
+                raise(NotImplementedError())
+        # 0.1 BAM SUBSAMPLING  
+            if do_subsample:
+                print('======== Running subsampling ===================')
+                subsampled_bam = tempdir + '/subsampled.bam' 
+                nsubs = int(args.subsamplebam)
+                if bamfile:
+                    if not os.path.isfile(bamfile + '.bai'):
+                        if verbose > 0:
+                            print('Indexing %s' % bamfile)
+                        helper.index_bam(bamfile,verbose = verbose,threads=threads)
+                # check here if it's an integer
+                helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,threads=threads)
+                # now, replace for downstream:
+                if verbose > 0:
+                    print('Indexing %s' % bamfile)
+                helper.index_bam(subsampled_bam,verbose = verbose,threads=threads)
+                if verbose > 0:
+                    print('Subsampling done.')
+                bamfile = subsampled_bam
+
+        # 1. MACS2
+            if do_macs2:
+                print('======== Running macs2 =========================')
+                peaksfile = tempdir + '/' + 'allpeaks.bed'
+                helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
+                helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
+                helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
+                helper.collect_macs_beds(outdir = tempdir,outfile = peaksfile,verbose = verbose)
+                if verbose > 0:
+                    print('Macs2 done.')
+            else:
+                if verbose > 0:
+                    print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
+
+        # 3. If used macs to call the peaks, filter the peaks by the coverage:
+        # REPLACE WITH A PIPELINE FUNCTION 
+            if do_macs2:    
+                print('======== Filtering macs2 peaks =================')
+                covfile = tempdir + '/' + 'allpeaks_coverage.bed'
+                # compute coverage for all the peaks:
+                # check if bam file is indexed:
+                if not os.path.isfile(bamfile + '.bai') and 'subsample' in bamfile:
                     if verbose > 0:
                         print('Indexing %s' % bamfile)
                     helper.index_bam(bamfile,verbose = verbose,threads=threads)
-            # check here if it's an integer
-            helper.subsample_bam(inputbam = bamfile,outputbam = subsampled_bam,nreads = nsubs,verbose = verbose,threads=threads)
-            # now, replace for downstream:
-            if verbose > 0:
-                print('Indexing %s' % bamfile)
-            helper.index_bam(subsampled_bam,verbose = verbose,threads=threads)
-            if verbose > 0:
-                print('Subsampling done.')
-            bamfile = subsampled_bam
-
-    # 1. MACS2
-        if do_macs2:
-            print('======== Running macs2 =========================')
-            peaksfile = tempdir + '/' + 'allpeaks.bed'
-            helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
-            helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
-            helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
-            helper.collect_macs_beds(outdir = tempdir,outfile = peaksfile,verbose = verbose)
-            if verbose > 0:
-                print('Macs2 done.')
-        else:
-            if verbose > 0:
-                print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
-
-    # 3. If used macs to call the peaks, filter the peaks by the coverage:
-    # REPLACE WITH A PIPELINE FUNCTION 
-        if do_macs2:    
-            print('======== Filtering macs2 peaks =================')
-            covfile = tempdir + '/' + 'allpeaks_coverage.bed'
-            # compute coverage for all the peaks:
-            # check if bam file is indexed:
-            if not os.path.isfile(bamfile + '.bai') and 'subsample' in bamfile:
                 if verbose > 0:
-                    print('Indexing %s' % bamfile)
-                helper.index_bam(bamfile,verbose = verbose,threads=threads)
-            if verbose > 0:
-                print('Computing coverage ...')
-            helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage,threads = threads)
-            # get the peaks overlapping genes:
-            if verbose > 0:
-                print('Getting genic peaks ...')
-            genicpeaksfile = tempdir + '/genic_peaks.bed'
-            helper.intersect(inputbed_a = covfile, inputbed_b = genefile,outputbed=genicpeaksfile,by_strand = True,verbose = verbose)
-            if not coverage_percentile:
+                    print('Computing coverage ...')
+                helper.get_coverage(inputbed_a=peaksfile,input_bam = bamfile,outputfile = covfile,verbose = verbose,mean = mean_coverage,threads = threads)
+                # get the peaks overlapping genes:
                 if verbose > 0:
-                    print('Coverage percentile is not set - retaining all the peaks...')
-                count_threshold = 0
+                    print('Getting genic peaks ...')
+                genicpeaksfile = tempdir + '/genic_peaks.bed'
+                helper.intersect(inputbed_a = covfile, inputbed_b = genefile,outputbed=genicpeaksfile,by_strand = True,verbose = verbose)
+                if not coverage_percentile:
+                    if verbose > 0:
+                        print('Coverage percentile is not set - retaining all the peaks...')
+                    count_threshold = 0
+                else:
+                    # get coverage percentile from genic peaks:
+                    count_threshold = helper.get_coverage_percentile(inputfile = genicpeaksfile,percentile = coverage_percentile,verbose = verbose)
+                    # hell, you also have to replace the column 
+                    if verbose > 0:
+                        print('%s-th %s coverage percentile for %s is %s %s. Filtering out the peaks below this value...' % (coverage_percentile,'mean' if mean_coverage else '' ,genicpeaksfile,str(count_threshold),'reads/base' if mean_coverage else 'reads'))
+                # get peaks not overlapping the genes and filter them by coverage
+                peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
+                peaksfiltcov = peaksfilt.replace('.bed','_fcov.bed')
+                if verbose > 0:
+                    print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+                # f=1 will filter out only the peaks fully contained within genes!!!
+                helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose,f = 1)
+                helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
+                peaksfilt = peaksfiltcov
             else:
-                # get coverage percentile from genic peaks:
-                count_threshold = helper.get_coverage_percentile(inputfile = genicpeaksfile,percentile = coverage_percentile,verbose = verbose)
-                # hell, you also have to replace the column 
+                # Simply remove peaks overlapping genes:
+                peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
                 if verbose > 0:
-                    print('%s-th %s coverage percentile for %s is %s %s. Filtering out the peaks below this value...' % (coverage_percentile,'mean' if mean_coverage else '' ,genicpeaksfile,str(count_threshold),'reads/base' if mean_coverage else 'reads'))
-            # get peaks not overlapping the genes and filter them by coverage
-            peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
-            peaksfiltcov = peaksfilt.replace('.bed','_fcov.bed')
-            if verbose > 0:
-                print('Removing peaks overlapping genes ... => %s' % peaksfilt)
-            # f=1 will filter out only the peaks fully contained within genes!!!
-            helper.outersect(inputbed_a = covfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose,f = 1)
-            helper.filter_by_coverage(inputfile = peaksfilt,outputfile = peaksfiltcov,threshold = count_threshold,verbose = True)
-            peaksfilt = peaksfiltcov
-        else:
-            # Simply remove peaks overlapping genes:
-            peaksfilt = tempdir + '/' + 'allpeaks_noov.bed'
-            if verbose > 0:
-                print('Removing peaks overlapping genes ... => %s' % peaksfilt)
-            #outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
-            helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
+                    print('Removing peaks overlapping genes ... => %s' % peaksfilt)
+                #outersect_peaks(genefile = genefile, peaksfile = peaksfile, outputbed = peaksfilt, verbose = verbose)
+                helper.outersect(inputbed_a = peaksfile,inputbed_b = genefile,outputbed=peaksfilt,by_strand = True, verbose = verbose)
 
-    # 3. Extend genes 
-        print('======== Extending genes =======================')
-        helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag,clip_mode = clip_mode)
-        
-    # 4. Add orphan peaks
-        if do_orphan:
-            print('======== Adding orphan peaks ===================')
-            #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
-            run_orphan()
-        if do_report:
-            print('======== Creating PDF report =======================')
-            generate_report()
-
-    # 5. Estimate intergenic mapping
-        print('======== Estimating intergenic mapping =========')
-        if bamfile:
+        # 3. Extend genes 
+            print('======== Extending genes =======================')
+            helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag,clip_mode = clip_mode)
+            
+        # 4. Add orphan peaks
             if do_orphan:
-                run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = tempdir + '/orphan_merged.bed',onlyestimate = False)
+                print('======== Adding orphan peaks ===================')
+                #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
+                run_orphan()
+            if do_report:
+                print('======== Creating PDF report =======================')
+                generate_report()
+
+        # 5. Estimate intergenic mapping
+            print('======== Estimating intergenic mapping =========')
+            if bamfile:
+                if do_orphan:
+                    run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = tempdir + '/orphan_merged.bed',onlyestimate = False)
+                else:
+                    run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = False)
             else:
-                run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = False)
-        else:
-            print("No bamfile specified - omitting mapping estimation")
-        if do_clean:
-            print('======== Cleaning temporary directory ==========')
-            clean_tmp(tempdir = tempdir)
-    elif bamfile:
-        print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
-        run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
-    print('======== Done ==================================')
+                print("No bamfile specified - omitting mapping estimation")
+            if do_clean:
+                print('======== Cleaning temporary directory ==========')
+                clean_tmp(tempdir = tempdir)
+        elif bamfile:
+            print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
+            run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
+        print('======== Done ==================================')
 
 
 # but coverage calculation is only possible if one has alignment data 
