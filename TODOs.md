@@ -40,10 +40,9 @@
 - [x] solve missing CDS features 
 - [x] clipped extensions should be written down
 - [x] exons from an artificial transcript should have their transcriptIDs updated as well 
-- [ ] __coverage parallelization__  
-- [ ] __clip antisense extensions if extended into another gene__  - maybe by introducing 2 exon clipping modes?
-- [ ] overlaps on the 5' end - assign these to the genes as well - will require 5' extension as well or simply filter them out.  
-- [ ] 5' extension?  
+- [x] remove peaks overlapping more than one gene  
+- [x] __coverage parallelization__  
+- [x] __clip antisense extensions if extended into another gene__  - maybe by introducing 2 exon clipping modes?
 - [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 
 
@@ -65,7 +64,8 @@ Extension modes
 - [ ] replace transcript   
 - [ ] replace exon  
 
-Performance:   
+Performance:
+- [x] 5' gene clipping     
 - [ ] try out `gffread` standardized output files, make sure it's compatible (can be accepted by genext)     
 - [ ] add extension by continuous coverage   
 
