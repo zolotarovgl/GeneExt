@@ -33,6 +33,7 @@ parser.add_argument('--report', action='store_true', help = 'Use this option to 
 parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
 parser.add_argument('--estimate', action='store_true', help = 'Use this to just estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
 parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.')
+parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed')
 parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [100000]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: 2 x [median gene length, bp]')
 
@@ -220,7 +221,7 @@ if __name__ == "__main__":
     do_estimate = args.estimate
     do_clean = not args.keep
     do_report = args.report and do_macs2
-    do_fix_only = True
+    do_fix_only = args.onlyfix
 
     do_orphan = args.orphan
     do_orphan_merge =  do_orphan and not args.nomerge
@@ -332,7 +333,6 @@ if __name__ == "__main__":
             helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
             print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,genefile5clip))
             genefile = genefile5clip
-            quit()
     print('Checks done.')
 
     ##################################################

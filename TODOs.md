@@ -44,9 +44,9 @@
 - [x] __coverage parallelization__  
 - [x] __clip antisense extensions if extended into another gene__  - maybe by introducing 2 exon clipping modes?
 - [x] fix single-gene contigs removal bug  
+- [x] if `--onlyfix` is set, only try fixing the annotation 
 - [ ] add 5' clipping logs - it should be evident which genes have been omitted from the analysis.  
-- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
-- [ ] if `--estimate` is set, only try fixing the annotation   
+- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)  
 
 
 Input annotation fixes:  
