@@ -24,6 +24,7 @@ parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2')
 parser.add_argument('-j', default = '1', help = 'Number of cores for samtools. [1]')
 parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_mrna]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--clip_mode',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
+parser.add_argument('--clip5', action='store_true', help = "Use this to clip 5' overlaps between genes.")
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
 parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
@@ -231,6 +232,7 @@ if __name__ == "__main__":
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
 
     # Clipping 5'-overlaps 
+    do_5clip = args.clip5
     do_5clip = True
 
     scriptloc = os.path.dirname(os.path.realpath(__file__))
@@ -301,23 +303,23 @@ if __name__ == "__main__":
         if not 'transcript' in features:
             print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
             if 'mRNA' in features:
-                fpref = genefile.split('/')[-1].split('.')[0]
-                fext = genefile.split('/')[-1].split('.')[1]
+                fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+                fext = genefile.split('/')[-1].split('.')[-1]
                 genefilewmrna = tempdir + '/' + fpref + '_mRNA2transcript.' + fext
                 #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
                 print('Found "mRNA" features - renaming as transcripts ...')
                 helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
                 genefile = genefilewmrna
             else:
-                fpref = genefile.split('/')[-1].split('.')[0]
-                fext = genefile.split('/')[-1].split('.')[1]
+                fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+                fext = genefile.split('/')[-1].split('.')[-1]
                 genefilewmrna = tempdir + '/' + fpref + '_addtranscripts.' + fext
                 #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
                 helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
         if not 'gene' in features:
             print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-            fpref = genefile.split('/')[-1].split('.')[0]
-            fext = genefile.split('/')[-1].split('.')[1]
+            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            fext = genefile.split('/')[-1].split('.')[-1]
             genefilewgenes = tempdir + '/' + fpref + '_addgenes.' + fext
             #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
             helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
@@ -327,8 +329,8 @@ if __name__ == "__main__":
         if do_5clip:
             print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
             # rename the file properl y
-            fpref = genefile.split('/')[-1].split('.')[0]
-            fext = genefile.split('/')[-1].split('.')[1]
+            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            fext = genefile.split('/')[-1].split('.')[-1]
             genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
             helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
             print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,genefile5clip))
@@ -348,8 +350,6 @@ if __name__ == "__main__":
             if do_orphan_merge:
                 if not orphan_maximum_size:
                     orphan_maximum_size = 2 * helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
-            if verbose > 0:
-                print('Checks done.')
 
         # 0. MAPPING - not implemented     
             if do_mapping:

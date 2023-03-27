@@ -144,9 +144,6 @@ def intersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 # Parse helper
-def gxf2bed(infile,outfile,featuretype = None):
-    """This function loads the gff/gtf file and returns a bed file"""
-    raise(NotImplementedError())
 
 def get_extension(filepath):
     fmt = os.path.splitext(filepath)[-1][1:]
@@ -285,6 +282,7 @@ def write_bed(outfile,regs):
 
 def gxf2bed(infile,outfile,featuretype = None):
     """This function loads the gff/gtf file and returns a bed file"""
+    print(infile)
     regs = check_ext_read_file(infile,featuretype=featuretype)
     write_bed(outfile,regs)
 
@@ -389,7 +387,7 @@ class Region:
 def gffutils_import_gxf(filepath,verbose = False):
     if verbose > 0:
         print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
-    db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
+    db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique',transform = gffutils_transform_func,keep_order = True)
     if verbose > 1:
         print('======== Features loaded: ======================')
         for a,b in zip(db.featuretypes(),[db.count_features_of_type(x) for x in db.featuretypes()]):
@@ -725,9 +723,6 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             else:
                 continue 
 
-#def extend_gtf(db,extend_dictionary,output_file,extension_mode = 'new_transcript',tag = None,verbose = False):
-#    raise(NotImplementedError('Extension is not yet available for .gff files!'))
-
 # Gene extension function 
 def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_type,infmt=None,outfmt=None,tag = None,clip_mode = None):
     # files with extensions:
@@ -831,7 +826,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
             if gene.strand == '+':
                 overlapped = [x for x in genes if x.start <= gene.end and x.end  > gene.end and x.chrom == gene.chrom]
             elif gene.strand == '-':
-                overlapped = [x for x in genes if x.end >= gene.start and x.end < gene.start and x.chrom == gene.chrom]
+                overlapped = [x for x in genes if x.end >= gene.start and x.end < gene.end and x.chrom == gene.chrom]
             if len(overlapped)>0:
                 if verbose > 2:
                     print('%s overlaps the genes: %s' % (gene.id,','.join([x.id for x in overlapped])))
@@ -851,7 +846,8 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
                 if gene.strand == '+':
                     overlapped = [x for x in genes_consider if x.start <= gene.end+extend_dictionary[gene.id] and x.start > gene.end]
                     if len(overlapped)>0:
-                        new_ext = overlapped[0].start - gene.end -1 
+                        # if multiple overlaps, select the one 
+                        new_ext = min([x.start for x in overlapped]) - gene.end -1 
                         if verbose > 2:
                             print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
                             print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
@@ -860,7 +856,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
                 else:
                     overlapped = [x for x in genes_consider if x.end >= gene.start-extend_dictionary[gene.id] and x.end < gene.start]
                     if len(overlapped)>0:
-                        new_ext = gene.start-overlapped[0].end-1
+                        new_ext = gene.start-max([x.end for x in overlapped])-1
                         if verbose > 2:
                             print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
                             print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
@@ -1112,7 +1108,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
     # record the maximal span per gene 
     if verbose > 1:
         print('Loading the database ...',flush = '')
-    db = gffutils.create_db(infile, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique')
+    db = gffutils.create_db(infile, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique',transform =gffutils_transform_func,keep_order = True)
     if verbose > 1:
         print('done.')   
     # create a transcript2gene and gene2transcript dicts:
@@ -1185,6 +1181,20 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 
 
 ######################### 5' clipping ########################################
+def gffutils_transform_func(x):
+    # Specific function for gffuitls import
+    if '' in x.attributes.keys():
+        x.attributes.pop('')
+    for k in x.attributes.keys():
+        v = x.attributes[k]
+        if len(v)>0:
+            v = v[0]
+        if '"' in v:
+            v=v.replace('"','')
+            x.attributes[k] = v
+    return(x)
+    
+
 def check_overlap(a,b):
     # check 5' overlap for 2 features
     if a.strand != b.strand or a.chrom != b.chrom:
@@ -1267,8 +1277,10 @@ def worker_process(genes, infile, i, results,verbose,tag):
         disable_infer_genes=True,
         disable_infer_transcripts=True,
         merge_strategy="create_unique",
+        transform=gffutils_transform_func
     )
     all_genes = [x for x in db.features_of_type("gene")]
+    
     if verbose > 2:
         print('process %s: total number of genes %s' % (i,len(all_genes)))
         print('process %s: number of genes in chunk %s' % (i,len(genes)))
@@ -1290,12 +1302,12 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
         disable_infer_genes=True,
         disable_infer_transcripts=True,
         merge_strategy="create_unique",
+        transform=gffutils_transform_func
     )
     genes = [x for x in db.features_of_type("gene")]
     print("%s genes loaded." % len(genes))
     # Split the genes into chunks for each worker process
     import math
-    
     chunk_size = math.floor(len(genes)/threads)
     chunks = [genes[i*(chunk_size):(i+1)*chunk_size] for i in range(0,threads-1)]
     chunks = chunks + [genes[sum([len(x) for x in chunks]):]]  
