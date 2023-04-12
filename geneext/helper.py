@@ -144,7 +144,6 @@ def intersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 # Parse helper
-
 def get_extension(filepath):
     fmt = os.path.splitext(filepath)[-1][1:]
     return(fmt)

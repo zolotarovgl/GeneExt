@@ -47,9 +47,12 @@
 - [x] if `--onlyfix` is set, only try fixing the annotation 
 - [x] fix empty gtf/gff attributes during parsing 
 - [x] gene overextension bug fix - minus strand    
-- [ ] retain only particular gene features - avoid double quotes     
+- [x] retain only particular gene features - avoid double quotes     
 - [ ] add 5' clipping logs - it should be evident which genes have been omitted from the analysis.  
-- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
+- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)]
+- [ ] remove format guessing from the name - it's very confusing for the file parsing  
+- [ ] fix missing mitochondrial genes   
+
    
 
 
