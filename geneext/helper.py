@@ -67,7 +67,6 @@ def compute_mean_coverage(region, aln):
 
 
 ################################################################
-import pysam
 from typing import List
 from multiprocessing import Pool
 import time

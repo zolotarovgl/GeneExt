@@ -49,7 +49,7 @@
 - [x] gene overextension bug fix - minus strand    
 - [x] retain only particular gene features - avoid double quotes     
 - [ ] add 5' clipping logs - it should be evident which genes have been omitted from the analysis.  
-- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)]
+- [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 - [ ] remove format guessing from the name - it's very confusing for the file parsing  
 - [ ] fix missing mitochondrial genes   
 - [ ] fix case where there are multiple transcripts per gene without gene id => select the longest one
@@ -96,3 +96,5 @@ Manual:
 - [x] add peak filtering manual        
 - [x] add orphan peaks manual   
 - [ ] add the section covering gene overlaps  
+- [ ] __change read direction in the figures__   
+- [ ] __add 5'-clipping figure__ 
