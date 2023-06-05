@@ -879,7 +879,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
                         # if multiple overlaps, select the one 
                         new_ext = min([x.start for x in overlapped]) - gene.end -1 
                         if verbose > 2:
-                            print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                            print('Extension check: found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
                             print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
                         extend_dictionary[gene.id] = new_ext
                         upd_counter += 1
@@ -888,7 +888,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
                     if len(overlapped)>0:
                         new_ext = gene.start-max([x.end for x in overlapped])-1
                         if verbose > 2:
-                            print('Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
+                            print('Exension check: Found downstream gene overlap: %s --> %s' % (gene.id,','.join([x.id for x in overlapped])))
                             print('Updated extension: %s -> %s' % (extend_dictionary[gene.id],new_ext))
                         extend_dictionary[gene.id] = new_ext
                         upd_counter +=1
@@ -1253,14 +1253,19 @@ def check_overlap(a,b):
                 return(False)
 
 
-def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
+def clip5_process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
+    logstr = []
     overlapped_genes = [x for x in genes if check_overlap(gene, x) == "5"]
     if len(overlapped_genes) > 0:
         overlapped_genes = [x for x in genes if check_overlap(gene, x) == "5"]
         ovgene = db[overlapped_genes[0].id]
         if verbose > 2:
-            print("Found 5' overlap %s -> %s" % (ovgene.id, gene.id))
+            print("5' clipping: found 5' overlap %s -> %s" % (ovgene.id, gene.id))
         # the gene should be clipped
+        old_start = gene.start
+        old_end = gene.end
+        new_start = gene.start
+        new_end = gene.end
         if gene.strand == "+":
             new_start = ovgene.end + 1
             gene.start = new_start
@@ -1270,6 +1275,8 @@ def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
         gene_range = [gene.start, gene.end]
         gene.source = gene.source + tag
         outstr = str(gene) + '\n'
+        # gene - overlapping_gene - gene_strand - overlapping_gene_strand - old_start - new_start - old_end - new_end 
+        logstr = "\t".join([gene.id,ovgene.id,gene.strand,ovgene.strand,str(old_start),str(new_start),str(old_end),str(new_end)]) + '\n'
         for child in db.children(db[gene.id]):
             if not child.featuretype == 'gene':
                 # remove child features outside of the new range:
@@ -1291,16 +1298,16 @@ def process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
                     if verbose > 2:
                         print('Child is outside of the new gene range\n%s\n%s' % (str(child),str(gene)))
                     pass
-        return(outstr)
+        return(outstr,logstr)
     else:
         outstr = str(gene) + '\n'
         for child in db.children(db[gene.id]):
             if not child.featuretype == 'gene':
                 outstr = outstr + str(child) + '\n'
-        return(outstr)
+        return(outstr,logstr)
 
 
-def worker_process(genes, infile, i, results,verbose,tag):
+def clip5_worker_process(genes, infile, i, results,logs,verbose,tag):
     db = gffutils.create_db(
         infile,
         ":memory:",
@@ -1311,18 +1318,25 @@ def worker_process(genes, infile, i, results,verbose,tag):
     )
     all_genes = [x for x in db.features_of_type("gene")]
     
-    if verbose > 2:
-        print('process %s: total number of genes %s' % (i,len(all_genes)))
-        print('process %s: number of genes in chunk %s' % (i,len(genes)))
+    #if verbose > 2:
+        #print('process %s: total number of genes %s' % (i,len(all_genes)))
+        #print('process %s: number of genes in chunk %s' % (i,len(genes)))
     result = []
-    
+    log = []
     for gene in genes:
-        result = result + [process_gene(gene, all_genes, db,verbose,tag)]
+        result_out,log_out = clip5_process_gene(gene, all_genes, db,verbose,tag)
+        result = result + [result_out]
+        if len(log_out)>0:
+            log = log + [log_out]
     # update the results vector
     results[i] = result
+    # update logs vector 
+    logs[i] = log
 
 
 def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = '_5clip'):
+    logfile = '5clip.log'
+    import math
     # Load the database
     if verbose > 1:
         print('Loading gene database.')
@@ -1337,18 +1351,18 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
     genes = [x for x in db.features_of_type("gene")]
     print("%s genes loaded." % len(genes))
     # Split the genes into chunks for each worker process
-    import math
     chunk_size = math.floor(len(genes)/threads)
     chunks = [genes[i*(chunk_size):(i+1)*chunk_size] for i in range(0,threads-1)]
     chunks = chunks + [genes[sum([len(x) for x in chunks]):]]  
     # Create a list to hold the results from each worker process
     manager = multiprocessing.Manager()
     results = manager.list([[] for _ in range(threads)])
+    logs = manager.list([[] for _ in range(threads)])
 
     # Start the worker processes
     processes = []
     for i in range(threads):
-        p = multiprocessing.Process(target=worker_process, args=(chunks[i], infile, i, results,verbose,tag))
+        p = multiprocessing.Process(target=clip5_worker_process, args=(chunks[i], infile, i, results,logs,verbose,tag))
         p.start()
         processes.append(p)
 
@@ -1364,4 +1378,9 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
     with open(outfile, "w") as outf:
         for result in final_results:
             outf.write(''.join(result))
-    
+    with open(logfile, "w") as outf:
+        outf.write("\t".join(['gene_id','ov_gene_id','gene_strand','ov_gene_strand','old_start','new_start','old_end','new_end']) + '\n')
+        for log in logs:
+            if len(log)>0:
+                outf.write(''.join(log))
+    quit()

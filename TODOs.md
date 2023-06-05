@@ -48,12 +48,14 @@
 - [x] fix empty gtf/gff attributes during parsing 
 - [x] gene overextension bug fix - minus strand    
 - [x] retain only particular gene features - avoid double quotes     
-- [ ] add 5' clipping logs - it should be evident which genes have been omitted from the analysis.  
+- [x] add 5' clipping logs - it should be evident which genes have been omitted from the analysis - added
 - [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 - [ ] remove format guessing from the name - it's very confusing for the file parsing  
 - [ ] fix missing mitochondrial genes   
 - [ ] fix case where there are multiple transcripts per gene without gene id => select the longest one  
-- [ ] clear logging of the 5'-clipping events - affected 5' and 3' genes
+- [ ] clear logging of the 5'-clipping events - affected 5' and 3' genes  
+- [ ] fix coverage estimation - should be more precise  
+
 
    
 

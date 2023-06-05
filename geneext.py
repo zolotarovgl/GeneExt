@@ -2,13 +2,15 @@
 import argparse
 from argparse import RawTextHelpFormatter
 from geneext import helper
+import logging
 import os
+import sys
 
 
 parser = argparse.ArgumentParser(description=
 """
 Program: GeneExt (Extend genes in 3' direction using single-cell RNA-seq data)
-Version: 0.8 
+Version: 1.0
 """,
                            formatter_class=RawTextHelpFormatter)
 parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True) 
@@ -44,6 +46,22 @@ parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt wi
 
 ########### Pipeline Functions ################
 ###############################################
+
+# set a logger for logging:
+class Logger(object):
+    def __init__(self,logfilename):
+        self.terminal = sys.stdout
+        self.log = open(logfilename, "a")
+   
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)  
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass    
 
 def pipeline_error_print(x=None):
     print("\n\n"+x + '\n')
@@ -204,7 +222,9 @@ if __name__ == "__main__":
     verbose = int(args.v)
     peaksfile = args.p
     genefile = args.g 
+
     outputfile = args.o
+    
     maxdist = args.m
     extension_mode = args.e
     threads = int(args.j)
@@ -235,10 +255,16 @@ if __name__ == "__main__":
     do_5clip = args.clip5
     #do_5clip = True
 
+    # Logging 
+    if outputfile:
+        logfilename = outputfile + ".GeneExt.log"
+    else:
+        logfilename = "GeneExt.log"
+    sys.stdout = Logger(logfilename)
+
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
     print(callcmd)
-    print(genefile)
 
     # If fix_only set - report only doing genome annotation fixes:
     if do_fix_only:
@@ -301,7 +327,7 @@ if __name__ == "__main__":
     elif infmt in ['gff','gtf']:
         features = helper.get_featuretypes(genefile)
         if not 'transcript' in features:
-            print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+            print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile)
             if 'mRNA' in features:
                 fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
                 fext = genefile.split('/')[-1].split('.')[-1]
@@ -465,5 +491,3 @@ if __name__ == "__main__":
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         print('======== Done ==================================')
 
-
-# but coverage calculation is only possible if one has alignment data 
