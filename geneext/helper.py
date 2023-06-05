@@ -474,15 +474,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
             if n_exons and feature.id in extend_dictionary.keys(): 
+                # dictoinary with written exons:
+                written_exons = []
                 if verbose > 2:
                     print(feature.id)
                     print("%s strand." % db[feature.id].strand)
                     print("%s transcripts found" % n_transcripts )
                     print("%s exons found" % n_exons)
                     print('Find mRNA with the most downstream exon ...')
-
-                    # dictoinary with written exons:
-                    written_exons = []
 
                     if n_exons == 0 or n_transcripts == 0:
                         print('No exons or transcripts found in the file!\nFeature types found in the annotation file:\n')

@@ -52,7 +52,8 @@
 - [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 - [ ] remove format guessing from the name - it's very confusing for the file parsing  
 - [ ] fix missing mitochondrial genes   
-- [ ] fix case where there are multiple transcripts per gene without gene id => select the longest one
+- [ ] fix case where there are multiple transcripts per gene without gene id => select the longest one  
+- [ ] clear logging of the 5'-clipping events - affected 5' and 3' genes
 
    
 
