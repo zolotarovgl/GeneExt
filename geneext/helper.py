@@ -1335,7 +1335,7 @@ def clip5_worker_process(genes, infile, i, results,logs,verbose,tag):
 
 
 def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = '_5clip'):
-    logfile = '5clip.log'
+    logfile = outfile + '5clip.log'
     import math
     # Load the database
     if verbose > 1:
@@ -1383,4 +1383,3 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
         for log in logs:
             if len(log)>0:
                 outf.write(''.join(log))
-    quit()

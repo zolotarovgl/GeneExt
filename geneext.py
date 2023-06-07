@@ -265,6 +265,8 @@ if __name__ == "__main__":
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
     print(callcmd)
+    # print the values of the pipeine settings
+
 
     # If fix_only set - report only doing genome annotation fixes:
     if do_fix_only:
@@ -400,6 +402,7 @@ if __name__ == "__main__":
                 if verbose > 0:
                     print('Subsampling done.')
                 bamfile = subsampled_bam
+                quit()
 
         # 1. MACS2
             if do_macs2:

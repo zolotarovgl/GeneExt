@@ -49,6 +49,7 @@
 - [x] gene overextension bug fix - minus strand    
 - [x] retain only particular gene features - avoid double quotes     
 - [x] add 5' clipping logs - it should be evident which genes have been omitted from the analysis - added
+- [x] fix and error with read subsampling  
 - [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
 - [ ] remove format guessing from the name - it's very confusing for the file parsing  
 - [ ] fix missing mitochondrial genes   
