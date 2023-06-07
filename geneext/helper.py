@@ -1030,7 +1030,8 @@ def get_median_gene_length(inputfile = None,fmt = None):
 
 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
-    cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
+    #cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
+    cmd = "samtools view -@ %s -c -F 260 %s | awk -v ct=%s '{print ct/$1}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
