@@ -1031,14 +1031,15 @@ def get_median_gene_length(inputfile = None,fmt = None):
 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     #cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
-    cmd = "samtools view -@ %s -c -F 260 %s | awk -v ct=%s '{print ct/$1}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
+    cmd = "samtools view -@ %s -c -F 256 %s | awk -v ct=%s 'BEGIN{OFMT=toreplace1}{if(ct<=$1){print ct/$1}else{print toreplace2}}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
+    cmd = cmd.replace('toreplace1','"%f"')
+    cmd = cmd.replace('toreplace2','"1.0"')
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     frac = ps.communicate()[0].decode("utf-8").rstrip()
-    # subsample the bam using samtools view 
-    
-    cmd = "samtools view -@ %s -F 260 -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
+    # subsample the bam using samtools view    
+    cmd = "samtools view -@ %s -F 256 -h -b -s %s %s -o %s" % (str(threads),str(frac),inputbam,outputbam)
     if verbose> 1:
         print('Subsampling %s to %s reads => %s\n%s' % (inputbam,nreads,outputbam,cmd),flush = False)
     ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
