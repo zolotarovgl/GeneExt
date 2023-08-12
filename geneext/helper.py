@@ -191,27 +191,30 @@ def guess_format(filepath,verbose = False):
             head = next(file).rstrip()
             firstchar = head[0]
     file.close()
-    nfields = head.count('\t')
+    
+    
+    nfields = len(head.split('\t'))
     if verbose > 1:
         print('%s fields in file' % nfields)
-    if nfields == 8:
+
+    if nfields == 9:
         if verbose > 1:
-            print('File has 8 fields - .gff/.gtf?')
+            print('File has 9 fields - .gff/.gtf?')
         if 'ID=' in head.split('\t')[8]:
             return('gff')
         elif '_id "' in head.split('\t')[8]:
             return('gtf')
         else:
-            raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n\n%s\n\n' % head))
+            raise(ValueError('Can not determine the format of the file (counted %s fields) - is it gtf/gff?\nUse -inf/-ouf to specify the format!\n\n%s\n\n' % (nfields,head)))
     elif nfields in [6,7]:
         return('bed')
     else:
-        raise(ValueError('Can not determine the format of the file - is it gtf/gff or bed?\n\n%s\n\n' % head))
+        raise(ValueError('Can not determine the format of the file (counted %s fields) - is it gtf/gff or bed?\nUse -inf/-ouf to specify the format!\n\n%s\n\n' % (nfields,head)))
 
 def parse_bed(infile):
     with open(infile) as file:
         lines = [line.rstrip().split('\t') for line in file if not '#' in line]
-        regs = [Region(chrom = x[0],start = int(x[1]),end = int(x[2]),id = str(x[3]),strand = str(x[5]),score = int(x[4])) for x in lines]
+        regs = [Region(chrom = x[0],start = int(x[1]),end = int(x[2]),id = str(x[3]),strand = str(x[5]),score = 0) for x in lines]
     file.close()
     return(regs)
     

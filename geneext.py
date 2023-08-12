@@ -64,19 +64,43 @@ class Logger(object):
         pass    
 
 def pipeline_error_print(x=None):
-    print("\n\n"+x + '\n')
+    print("\n"+x + '\n')
     os.system('cat %s/geneext/err.txt' % scriptloc)
     quit()
 
+#######################################################################################
 
-def parse_input_output_formats():
-    # guess the format of input annotation 
-    infmt = helper.guess_format(genefile)
-    outfmt = 'gtf'
-    if verbose > 0:
-        print('Input: %s, guessed format: %s\nOutput: %s, guessed format: %s' % (genefile,infmt,outputfile,outfmt))
-    return(infmt,outfmt)
+def parse_input_format():
+    if args.inf is not None:
+        infmt = args.inf
+        if verbose > 0:
+            print('Input: %s; Specified format: %s'  % (genefile,infmt))
+    else:
+        infmt = helper.guess_format(genefile)
+        if verbose > 0:
+            print('Input: %s, guessed format: %s' % (genefile,infmt))
+    if not infmt in ['bed','gff','gtf']:
+        pipeline_error_print('Unknown input format "%s"!\nPlease either make sure the format is written properly or specify it yourself using --ouf option.' % infmt)
+    return(infmt)
+def parse_output_format():
+    if args.ouf is not None:
+        outfmt = args.ouf
+        if verbose > 0:
+            print('Output: %s; Specified format: %s' % (outputfile,outfmt))
+    else:
+        # guess an output format from the name extension
+        outfmt = helper.get_extension(outputfile)
+        if verbose > 0:
+            print('Output: %s, guessed format: %s' % (outputfile,outfmt))
+    if not outfmt in ['bed','gff','gtf']:
+        pipeline_error_print('Unknown output format "%s"!\nPlease either make sure the format is written properly or specify it yourself using --ouf option.' % outfmt)
+    return(outfmt)      
 
+def compare_infmt_outfmt(infmt,outfmt):
+    if infmt != outfmt:
+        pipeline_error_print('Please, make sure the input and the output have the same format!')
+
+##########################################################################
 
 def run_peakcalling():
     helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
@@ -321,12 +345,18 @@ if __name__ == "__main__":
                 print('Directory created: %s' % tempdir)
     else:
         print('Temporary directory exists. Overwriting!')
-    
-    infmt,outfmt = parse_input_output_formats()
-    if not infmt in ['bed','gff','gtf']:
-        pipeline_error_print('Unknown input format!')
+
+    ####################################################
+    # Parse input / output formats
+    # The output format should also be parsed separately 
+    infmt = parse_input_format()
+    outfmt = parse_output_format()
+    if(outfmt == 'bed'):
+        pipeline_error_print("I can't output .bed yet!")
+    compare_infmt_outfmt(infmt,outfmt)
+    ####################################################
     # Check and fix the input file
-    elif infmt in ['gff','gtf']:
+    if infmt in ['gff','gtf']:
         features = helper.get_featuretypes(genefile)
         if not 'transcript' in features:
             print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile)
