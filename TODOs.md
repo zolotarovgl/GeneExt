@@ -50,12 +50,15 @@
 - [x] retain only particular gene features - avoid double quotes     
 - [x] add 5' clipping logs - it should be evident which genes have been omitted from the analysis - added
 - [x] fix and error with read subsampling  
+- [x] add proper tempdir naming - don't re-run bam subsampling if a temporary file is found!
 - [ ] solve the cases of gene overlaps post-extension (when extension of both genes results in the overlap)
-- [ ] remove format guessing from the name - it's very confusing for the file parsing  
 - [ ] fix missing mitochondrial genes   
 - [ ] fix case where there are multiple transcripts per gene without gene id => select the longest one  
 - [ ] clear logging of the 5'-clipping events - affected 5' and 3' genes  
 - [ ] fix coverage estimation - should be more precise  
+- [ ] Tadh subsampling bug
+- [ ] 12.08 bug 
+- [ ] add .bed to gtf / gff conversion   
 
 
    
