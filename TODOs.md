@@ -105,3 +105,14 @@ Manual:
 - [ ] add the section covering gene overlaps  
 - [ ] __change read direction in the figures__   
 - [ ] __add 5'-clipping figure__ 
+
+# Most pressing 
+- [ ] introduce intermediate files pickup - the bam shouldn't be split every time 
+- [ ] introduce picking the longest isoform per gene 
+- [ ] the format should be guessed from the output name and, if none, should be inferred from the input file name 
+- [ ] the output should be compatible with STARsolo, alevin-fry, cellranger
+- [ ] replace --keep with --purge for intermediate file keeping 
+- [ ] explain better what a --mean-coverage means and make it default 
+- [ ] peplace peakp with --peak_perc
+- [ ] make --estimate default and remove the option  
+- [ ] isoform modee: longest, multiple 
