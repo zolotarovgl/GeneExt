@@ -107,13 +107,13 @@ Manual:
 - [ ] __add 5'-clipping figure__ 
 
 # Most pressing 
-- [ ] introduce intermediate files pickup - the bam shouldn't be split every time 
-- [ ] add force option - rerunning everything each time 
-- [ ] introduce picking the longest isoform per gene 
-- [ ] the format should be guessed from the output name and, if none, should be inferred from the input file name 
-- [ ] the output should be compatible with STARsolo, alevin-fry, cellranger
-- [ ] replace --keep with --purge for intermediate file keeping 
-- [ ] explain better what a --mean-coverage means and make it default 
+- [x] introduce intermediate files pickup - the bam shouldn't be split every time 
+- [x] the format should be guessed from the output1 name and, if none, should be inferred from the input file name 
+- [x] the output should be compatible with STARsolo, alevin-fry, cellranger
+- [x] replace --keep with --purge for intermediate file keeping 
+- [x] explain better what a --mean-coverage means and make it default 
 - [x] peplace peakp with --peak_perc
-- [ ] make --estimate default and remove the option  
-- [ ] isoform modee: longest, multiple 
+- [x] make --estimate default and remove the option  
+- [x] add force option - rerunning everything each time 
+- [ ] introduce picking the longest isoform per gene 
+- [ ] update the manual

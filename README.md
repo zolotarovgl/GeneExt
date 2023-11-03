@@ -16,24 +16,26 @@ Dependencies:
 * python `gffutils`  
 * python `numpy`  
 * python `pysam`  
+* python `rich`  
 
 
-These dependencies can be installed with `conda`: 
+These dependencies can be installed with `conda` or `mamba`: 
 
 ```
 # create environment
 conda create -n geneext
 conda activate geneext
 # install dependencies
-conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam  
+conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam rich  
 ```
 
 
 # TL;DR  Run
 Once you have dependencies installed, you can try running `GeneExt`:  
 ```
-python geneext.py -g [genome .bed/.gtf/.gff] -b [10x.bam] -m [maximal extension,bp] -o [output name]
+python geneext.py -g [genome .bed/.gtf/.gff] -b [10x.bam] -o [output name]
 ```
+__CAVE:__ Please, first test whether the tool works properly on test data! 
 
 
 # Manual  
@@ -58,20 +60,20 @@ To mitigate this effect, `GeneExt` will try to extend the genes in your referenc
 
 To run `GeneExt`, you will need the following:  
 
-1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis ["Where can I get a .bam file?"](#where-can-i-get-a-bam-file))  
+1. scRNA-seq dataset mapped to the genome - `.bam` alignment file (vis ["Where do I get a .bam file?"](#where-do-i-get-a-bam-file))  
 2. Genome annotation in the `bed`, `gff` or `gtf` formats  
 
 Note 1: in a `bed` file, only gene ranges should be present.  
 Note 2: if using `.gff/.gtf` file, make sure there are "gene" features defined!  
 
 `GeneExt` accepts following annotion input formats and converts them to the output:   
-* `bed` &rarr; `crgtf`   __NOT IMPLEMENTED__
 * `gff` &rarr; `gtf`  
 * `gtf` &rarr; `gtf`  
 
-In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their 9-th column attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting))   
+In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their 9-th column attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting)).
+Please, make sure your genome annotation file is properly formatted!   
 
-## Where can I get a .bam file?   
+## Where do I get a .bam file?   
 
 If you already have used `cellranger`, then you can simply use its `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
@@ -99,7 +101,7 @@ Resulting `cellsAligned.sortedByCoord.out.bam` can be used as an input for the `
 
 ## BAM subsampling   
 
-If your 10x dataset is too big for `GeneExt` to run in meaninful time, you can subsample the `.bam` file to N reads using an option `--subsamplebam N`. This will significantly speed up the pipeline, but may come at a cost of missing some genes.   
+If your sequencing dataset is too big for `GeneExt` to run in meaninful time, you can subsample the `.bam` file to N reads using an option `--subsamplebam N`. This will significantly speed up the pipeline, but may come at a cost of missing some genes.   
 __CAVE:__ Subsampling make take a long time to run on a big file. If you are going to try multiple parameters for the same genome, it makes sense to subsample the dataset before using `GeneExt`.  
 
 
@@ -148,6 +150,8 @@ Thus, instead of setting `-m` to unrealistically big values, we advice setting i
 Depending on the application (or rather your taste), you may want to add extensions differently.  
 Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
 
+
+# TO UPDATE
 Currently, the following modes are available:   
 * `new_transcript` - copies the transcript with the most downstream exon and adds a new one with the most downstream exon extended  
 * `new_exon`  - adds the most downstream exon to the original transcript   

@@ -93,7 +93,8 @@ def get_coverage(inputbed_a, input_bam, outputfile, verbose=0, mean=False, threa
     bed = parse_bed(inputbed_a)
     # split into chunks for threads
     chunks = [x for x in split(bed, threads)]
-    print("mean chunk size: %s" % np.mean(np.array([len(x) for x in chunks])))
+    if verbose:
+        print("mean chunk size: %s" % np.mean(np.array([len(x) for x in chunks])))
     with open(outputfile, "w") as fout:
         if verbose > 1:
             print(f"Computing coverage for {str(len(bed))} peaks with {threads} threads...")
@@ -116,8 +117,9 @@ def get_coverage(inputbed_a, input_bam, outputfile, verbose=0, mean=False, threa
                     )
     end = time.time()
     e = end - start
-    print('Done computing coverage: %s' % (outputfile))
-    print(f"{round(e/len(bed)*1000,2)} ms per region")
+    if verbose:
+        print('Done computing coverage: %s' % (outputfile))
+        print(f"{round(e/len(bed)*1000,2)} ms per region")
 ###############################################################################
 
 def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
@@ -317,7 +319,6 @@ def write_bed(outfile,regs):
 
 def gxf2bed(infile,outfile,featuretype = None):
     """This function loads the gff/gtf file and returns a bed file"""
-    print(infile)
     regs = check_ext_read_file(infile,featuretype=featuretype)
     write_bed(outfile,regs)
 
@@ -959,7 +960,7 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
                     file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % gid])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
                     file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
-        if verbose > -1:
+        if verbose > 0:
             print('%s orphan peaks added' % (str(len(regs))))
 
 
