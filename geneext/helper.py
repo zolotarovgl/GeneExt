@@ -223,6 +223,7 @@ def parse_gff(infile,featuretype = None):
     def gff_get_ID(x):
     # get ID from .gff 9th field
         m = re.search('ID=(.+?);', x)
+        # Aha! Newly
         if m:
             return(m.group(1))
         else:
@@ -444,7 +445,7 @@ def str_gff(f,attributes= ['ID','Parent']):
     # creates a feature line from gffutils feature
     # clean attributes - retain only gene_id, transcript_id
     ats = [x for x in f.attributes if x in attributes]
-    at = '; '.join(['%s "%s"' % (k,v)  for k,v in zip([x for x in ats],[f[x][0] for x in ats])])
+    at = '; '.join(['%s=%s' % (k,v)  for k,v in zip([x for x in ats],[f[x][0] for x in ats])])
     o = '\t'.join([f.chrom,f.source,f.featuretype,str(f.start),str(f.end),'.',f.strand,'.',at])
 
     return(o)
@@ -762,14 +763,13 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_t
     extension_table = temp_dir + '/extensions.tsv'
     #extension_bed = temp_dir + '/extensions.bed'
 
-    if not outfmt in ['crgtf','gtf']:
+    if not outfmt in ['gtf','gff']:
         print("Unknown output format: %s" % outfile)
         quit()
 
     if verbose > 1:
         print('======== Gene extension: Loading annotations ===')
     #genes = check_ext_read_file(genefile,featuretype = 'gene')
-
     if infmt == 'bed':
         genes = parse_bed(genefile)
     elif infmt == 'gff':
@@ -1188,7 +1188,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                     gene.featuretype = 'gene'
                     gene['ID'] = gene['Parent'][0]
                     geneid = gene['Parent'][0]
-                    ofile.write(str_gff(gene,attributes = ['ID']) + '\n')
+                    ofile.write(str_gff(gene,attributes = ['ID']) + ';\n')
                     # write the gene:
                     #geneid = gene['Parent'][0]
                     #o = "\t".join([gene.chrom,gene.source,str(gene.start),str(gene.end),'.',gene.strand,'.','gene_id "' + geneid + '"'])
@@ -1203,6 +1203,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                     print('No parent found for transcript %s, where are the genes?' % feature.id)
 
 def add_transcript_features(infile = None,outfile = None, infmt = None,verbose = False):
+    # guess transcript features from the exons 
     raise(NotImplementedError())
 
     

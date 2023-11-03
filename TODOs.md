@@ -108,11 +108,12 @@ Manual:
 
 # Most pressing 
 - [ ] introduce intermediate files pickup - the bam shouldn't be split every time 
+- [ ] add force option - rerunning everything each time 
 - [ ] introduce picking the longest isoform per gene 
 - [ ] the format should be guessed from the output name and, if none, should be inferred from the input file name 
 - [ ] the output should be compatible with STARsolo, alevin-fry, cellranger
 - [ ] replace --keep with --purge for intermediate file keeping 
 - [ ] explain better what a --mean-coverage means and make it default 
-- [ ] peplace peakp with --peak_perc
+- [x] peplace peakp with --peak_perc
 - [ ] make --estimate default and remove the option  
 - [ ] isoform modee: longest, multiple 

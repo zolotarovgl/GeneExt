@@ -32,7 +32,7 @@ parser.add_argument('--orphan',action='store_true', help = 'Whether to add orpha
 parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [100000]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: 2 x [median gene length, bp]')
 parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
-parser.add_argument('--peakp',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.\n\n\n================ Miscellaneous ================\n')
+parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.\n\n\n================ Miscellaneous ================\n')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
 parser.add_argument('--keep', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
@@ -232,7 +232,41 @@ def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None
     ofile.close()
 
     # depends on whether it was called only multple files or ont 
-
+def run_genefile_fix(genefile):
+    # Given an input file, check if it's missing "gene" and "transcript" features, if so, fix it and output an updated file name 
+    features = helper.get_featuretypes(genefile)
+    if not 'transcript' in features:
+        print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile)
+        if 'mRNA' in features:
+            print('Found "mRNA" features in file - renaming')
+            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            fext = genefile.split('/')[-1].split('.')[-1]
+            genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
+            print('Found "mRNA" features - renaming as transcripts ...')
+            helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
+            genefile = genefilewmrna
+            print("New file name: %s" % genefile)
+        else:
+            print('Missing "mRNA" features in file - adding')
+            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            fext = genefile.split('/')[-1].split('.')[-1]
+            genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
+            helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
+            genefile = genefilewmrna
+            print("New file name: %s" % genefile)
+    if not 'gene' in features:
+        print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+        fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1]).replace('.fixed','')
+        fext = genefile.split('/')[-1].split('.')[-1]
+        genefilewgenes = tempdir + '/' + fpref + '.fixed.' + fext
+        #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
+        helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
+        print('Fix done, annotation with gene features: %s' % genefilewgenes )
+        genefile = genefilewgenes
+        print("New file name: %s" % genefile)
+    return(genefile)
 
 
 
@@ -258,7 +292,7 @@ if __name__ == "__main__":
 
     # peak coverage percentile:
     mean_coverage = args.mean_coverage
-    coverage_percentile = args.peakp
+    coverage_percentile = args.peak_perc
 
     # pipeline execution:
     do_mapping = False
@@ -390,32 +424,14 @@ if __name__ == "__main__":
     ####################################################
     # Check and fix the input file
     if infmt in ['gff','gtf']:
-        features = helper.get_featuretypes(genefile)
-        if not 'transcript' in features:
-            print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile)
-            if 'mRNA' in features:
-                fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-                fext = genefile.split('/')[-1].split('.')[-1]
-                genefilewmrna = tempdir + '/' + fpref + '_mRNA2transcript.' + fext
-                #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
-                print('Found "mRNA" features - renaming as transcripts ...')
-                helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
-                genefile = genefilewmrna
-            else:
-                fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-                fext = genefile.split('/')[-1].split('.')[-1]
-                genefilewmrna = tempdir + '/' + fpref + '_addtranscripts.' + fext
-                #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
-                helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
-        if not 'gene' in features:
-            print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-            fext = genefile.split('/')[-1].split('.')[-1]
-            genefilewgenes = tempdir + '/' + fpref + '_addgenes.' + fext
-            #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
-            helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
-            print('Fix done, annotation with gene features: %s' % genefilewgenes )
-            genefile = genefilewgenes
+        # check if the fixed version already exists:
+        fixed_file_name = tempdir + '/' + genefile.replace('.','.fixed.')
+        if os.path.exists(fixed_file_name):
+            print('Found fixed genome file: %s' % fixed_file_name)
+            genefile = fixed_file_name
+        else:
+            genefile = run_genefile_fix(genefile)
+
         # Fix 5'overlaps 
         if do_5clip:
             print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
