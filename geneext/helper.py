@@ -180,7 +180,7 @@ def get_extension(filepath):
     fmt = os.path.splitext(filepath)[-1][1:]
     return(fmt)
 
-def guess_format(filepath,verbose = False):
+def guess_format_fromfile(filepath,verbose = False):
     """Guess file exension from a header"""
     #with open(filepath) as file:
     #    head = [next(file).rstrip() for x in range(5)]
@@ -297,7 +297,7 @@ def _guess_format(filepath,fmt = None,featuretype = None):
 
 def check_ext_read_file(filepath,featuretype = None):
     """Get file extension and load a file as a list of Region objects."""
-    extension = guess_format(filepath)
+    extension = guess_format_fromfile(filepath)
     if not extension in ['gff','bed','gtf']:
         raise(ValueError("Please, use bed / gff / gtf file!"))
     else:

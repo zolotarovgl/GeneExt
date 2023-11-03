@@ -29,8 +29,8 @@ parser.add_argument('-e', default = 'new_transcript', help = 'How to extend the 
 parser.add_argument('--clip_mode',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
 parser.add_argument('--clip5', action='store_true', help = "Use this to clip 5' overlaps between genes. The downstream gene will be clipped.\nCAVE: use carefully if the genome contains many overlapping genes (e.g. mitochondrial genomes).\n\n\n================ Orphan peaks ================\n")
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [100000]')
-parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: 2 x [median gene length, bp]')
+parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [10000]')
+parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
 parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.\n\n\n================ Miscellaneous ================\n')
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
@@ -77,7 +77,8 @@ def parse_input_format():
         if verbose > 0:
             print('Input: %s; Specified format: %s'  % (genefile,infmt))
     else:
-        infmt = helper.guess_format(genefile)
+        # guess from the output file name 
+        infmt = helper.guess_format_fromfile(genefile)
         if verbose > 0:
             print('Input: %s, guessed format: %s' % (genefile,infmt))
     if not infmt in ['bed','gff','gtf']:
@@ -90,7 +91,13 @@ def parse_output_format():
             print('Output: %s; Specified format: %s' % (outputfile,outfmt))
     else:
         # guess an output format from the name extension
-        outfmt = helper.get_extension(outputfile)
+        if helper.get_extension(outputfile)!= "":
+            outfmt = helper.get_extension(outputfile)
+        else:
+            # use input file format
+            outfmt = infmt
+            if verbose > 0:
+                print('Output format can not be guessed from output file name -> using input file format %s' % infmt)
         if verbose > 0:
             print('Output: %s, guessed format: %s' % (outputfile,outfmt))
     if not outfmt in ['bed','gff','gtf']:
@@ -456,7 +463,7 @@ if __name__ == "__main__":
             # if maximum size for orphan peak is not set, set it to the median gene size:
             if do_orphan_merge:
                 if not orphan_maximum_size:
-                    orphan_maximum_size = 2 * helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
+                    orphan_maximum_size = helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
 
         # 0. MAPPING - not implemented     
             if do_mapping:
