@@ -17,6 +17,7 @@ Dependencies:
 * python `numpy`  
 * python `pysam`  
 * python `rich`  
+* python `pandas`
 
 
 These dependencies can be installed with `conda` or `mamba`: 
@@ -26,7 +27,7 @@ These dependencies can be installed with `conda` or `mamba`:
 conda create -n geneext
 conda activate geneext
 # install dependencies
-conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam rich  
+conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools pysam rich pandas 
 ```
 
 
@@ -208,7 +209,7 @@ You can compare this distribution with the distribution of introduced gene exten
 
 ## Input troubleshooting  
 
-> "All properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
+> "Properly formatted .gtf files are all alike; each bad .gtf is broken in its own way."
 >
 > Anna Karenina principle for genome annotation files
 
@@ -241,10 +242,7 @@ Notes:
 ## Adding missing "gene" features  
 
 Quite often `.gtf/.gff` file will miss "gene" features. In such cases, `GeneExt` will try to fix the annotation by inferring genes.  
-
-
-
-
+Note: currently, `transcript` features are not added automatically. Please, check if your annotation file at least contains exons and transcripts. 
 
 # FAQs  
 
@@ -259,12 +257,11 @@ see [Input troubleshooting](##input-troubleshooting)
 2. Parallelization:  
   You can split your genome into individual chromosomes / contigs and run `GeneExt` on each of them separately  
 
-## I get too many orphan peaks. How should I filter them?   
+## I get hundreds of thoursands of peaks. How should I filter them?   
 
-The results of peak calling depend on the  dataset quality. `GeneExt` allows to select peaks based on the coverage __before__ gene extension.  
-However, as is stated above, having many "orphan" peaks in your annotation __will not affect gene counting__. You can filter the peaks in the downstream analyses by expression.  
+The results of peak calling depend on the  dataset quality. By default, `GeneExt` filters the peaks based on the coverage __before__ gene extension.  
+However, as is stated above, having many "orphan" peaks in your annotation __will not affect gene counting__ but may help preserving valuable information about cell type heterogeneity in the data.    
 
 
-## Some orphan peaks look like missing genes - how can I link them?   
-
+## Some orphan peaks look like missing genes - how can I link them? 
 For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1'). If you observe a lot of such cases, you can try increasing parameters for orphan peak clustering and merging (`--orphan_maxdist`,`--orphan_size`).   

@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.markup import escape
 
+import pandas as pd
+
 parser = argparse.ArgumentParser(description=
 """
 Program: GeneExt
@@ -171,6 +173,12 @@ def generate_report():
         print('Running:\n%s' % cmd)
     os.system(cmd)
 
+def report_extensions(file_path,n_genes = 10000):
+    """Load a tabular file, report the number of rows and median value of the last column."""
+    df = pd.read_csv(file_path,sep = '\t')
+    num_rows = len(df)
+    median_value = round(df.iloc[:, -1].median(), 1)
+    console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
 
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
@@ -258,43 +266,48 @@ def run_genefile_fix(genefile):
     # Given an input file, check if it's missing "gene" and "transcript" features, if so, fix it and output an updated file name 
     features = helper.get_featuretypes(genefile)
     if not 'transcript' in features:
-        console.print('\nGenome annotation warning: Could not find "transcript" features in %s! Trying to fix ...' % genefile,style = 'white')
+        console.print('Genome annotation warning: Could not find "transcript" features in %s! Trying to fix ...' % genefile,style = 'white')
         if 'mRNA' in features:
             #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
             #fext = genefile.split('/')[-1].split('.')[-1]
             #genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
-            genefilewmrna = helper.append_before_ext(genefile,'fixed')
+            new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+            #genefilewmrna = helper.append_before_ext(genefile,'fixed')
+            
             #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
             if verbose > 0:
                 print('Found "mRNA" features - renaming as transcripts ...')
-            helper.mRNA2transcript(infile = genefile,outfile = genefilewmrna, verbose = verbose)
-            genefile = genefilewmrna
+            helper.mRNA2transcript(infile = genefile,outfile = new_genefile, verbose = verbose)
+            genefile = new_genefile
             if verbose > 0:
                 print("New file name: %s" % genefile)
         else:
-            if verbose > 0:
-                console.print('Missing "mRNA" features in file - adding',style = 'bold red')
+            pipeline_error_print("Missing 'transcript' or 'mRNA' features in the genome annotation file %s!" % genefile)
+            quit()
             #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
             #fext = genefile.split('/')[-1].split('.')[-1]
             #genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
-            genefilewmrna = helper.append_before_ext(genefile,'fixed')
+            #genefilewmrna = helper.append_before_ext(genefile,'fixed')
+            new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+            
             #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
-            helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
-            genefile = genefilewmrna
+            helper.add_transcript_features(infile = genefile, outfile = new_genefile,verbose = verbose)
+            genefile = new_genefile
             if verbose > 0:
                 print("New file name: %s" % genefile)
     if not 'gene' in features:
         #print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-        console.print('\nGenome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile,style = 'white')
+        console.print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile,style = 'white')
         #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1]).replace('.fixed','')
         #fext = genefile.split('/')[-1].split('.')[-1]
         #genefilewgenes = tempdir + '/' + fpref + '.fixed.' + fext
-        genefilewgenes = helper.append_before_ext(genefile,'fixed')
+        new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+
         #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
-        helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
+        helper.add_gene_features(infile = genefile,outfile = new_genefile,infmt = infmt,verbose = verbose)
         if verbose > 0:
-            print('Fix done, annotation with gene features: %s' % genefilewgenes )
-        genefile = genefilewgenes
+            print('Fix done, annotation with gene features: %s' % new_genefile )
+        genefile = new_genefile
         if verbose > 0:
             print("New file name: %s" % genefile)
     return(genefile)
@@ -332,6 +345,7 @@ if __name__ == "__main__":
     maxdist = args.m
     #extension_mode = args.e # the option has been removed for clarity 
     extension_mode = 'new_transcript'
+    #extension_mode = 'new_exon'
 
     threads = int(args.j)
     tag = args.tag
@@ -374,7 +388,7 @@ if __name__ == "__main__":
     sys.stdout = Logger(logfilename)
 
     do_longest = True # whether to select the longest transcript per gene 
-
+    write_original_transcript = False # whether to write down the original transcript features
 #################################################################
 
 
@@ -521,7 +535,7 @@ if __name__ == "__main__":
             helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
             print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,genefile5clip))
             genefile = genefile5clip
-    console.print('done',style = 'bold green')
+    #console.print('done',style = 'bold green')
 
     console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
     ##################################################
@@ -640,9 +654,9 @@ if __name__ == "__main__":
         # 3. Extend genes 
             #console.print('======== Extending genes =======================',style = 'bold yellow',end = end)
             print_task('Extending genes')
-            helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_type = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag,clip_mode = clip_mode)
+            helper.extend_genes(genefile = genefile,peaksfile = peaksfilt,outfile = outputfile,maxdist = int(maxdist),temp_dir = tempdir,verbose = verbose,extension_mode = extension_mode,infmt = infmt,outfmt = outfmt,tag = tag,clip_mode = clip_mode,write_original_transcript = write_original_transcript)
             console.print('done',style = 'bold green')
-            
+
         # 4. Add orphan peaks
             if do_orphan:
                 #console.print('======== Adding orphan peaks ===================',style = 'bold yellow', end = end)
@@ -673,3 +687,4 @@ if __name__ == "__main__":
             print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
+        report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))

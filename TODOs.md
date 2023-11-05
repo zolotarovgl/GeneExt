@@ -114,8 +114,9 @@ Manual:
 - [x] explain better what a --mean-coverage means and make it default 
 - [x] peplace peakp with --peak_perc
 - [x] make --estimate default and remove the option  
-- [x] add force option - rerunning everything each time 
-- [ ] add reporting missing transcripts per gene  
-- [ ] introduce picking the longest isoform per gene 
+- [x] add force option - rerunning everything each time
+- [x] introduce picking the longest isoform per gene  
+- [x] add reporting missing transcripts per gene  
+- [ ] add message report for vanilla execution: number of genes extended etc. 
 - [ ] update the manual  
 - [ ] add extensive logging - all error messages should be written to the temporary directory log  
