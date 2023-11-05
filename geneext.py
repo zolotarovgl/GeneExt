@@ -173,12 +173,20 @@ def generate_report():
         print('Running:\n%s' % cmd)
     os.system(cmd)
 
-def report_extensions(file_path,n_genes = 10000):
+def is_file_empty(file_path):
+    """Check if a file has zero lines."""
+    with open(file_path, 'r') as file:
+        return not any(file)
+
+def report_extensions(file_path,n_genes = None):
     """Load a tabular file, report the number of rows and median value of the last column."""
-    df = pd.read_csv(file_path,sep = '\t')
-    num_rows = len(df)
-    median_value = round(df.iloc[:, -1].median(), 1)
-    console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
+    if not is_file_empty(file_path):
+        df = pd.read_csv(file_path,sep = '\t')
+        num_rows = len(df)
+        median_value = round(df.iloc[:, -1].median(), 1)
+        console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
+    else:
+        console.print('No genes could be extended',style = 'bold red')
 
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 

@@ -117,6 +117,8 @@ Manual:
 - [x] add force option - rerunning everything each time
 - [x] introduce picking the longest isoform per gene  
 - [x] add reporting missing transcripts per gene  
-- [ ] add message report for vanilla execution: number of genes extended etc. 
+- [x] add message report for vanilla execution: number of genes extended etc. 
+- [x] fix when no extensions are reported
 - [ ] update the manual  
 - [ ] add extensive logging - all error messages should be written to the temporary directory log  
+- [ ] change orphan peak ids / names to somethehing meaningful
