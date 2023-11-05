@@ -8,6 +8,17 @@ import multiprocessing
 from functools import partial
 import time
 
+
+# directory handling 
+
+def get_prefixed_path(file_path, prefix='tmp_'):
+    # Turns the specified path into the directory with a "tmp_" prefix
+    directory, filename = os.path.split(file_path)
+    base_name, ext = os.path.splitext(filename)
+    new_filename = f"{prefix}{base_name}{ext}"
+    return os.path.join(directory, new_filename)
+
+
 # macs2_helper
 
 def split_strands(bamfile,outdir,verbose = False,threads = 1):
@@ -1032,6 +1043,12 @@ def get_median_gene_length(inputfile = None,fmt = None):
     med = np.median([x.end - x.start for x in regs])
     return(med)
 
+# for intermediate file naming
+def append_before_ext(filename, suffix):
+    name, ext = os.path.splitext(filename)
+    if not name.endswith(f".{suffix}"):
+        return f"{name}.{suffix}{ext}"
+    return filename
 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     #cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))
@@ -1215,6 +1232,54 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
     if verbose > 1:
         print('Running: %s' % cmd)
     os.system(cmd)
+
+######################### Longest transcript per gene ########################
+
+def select_longest_transcript(infile,outfile,infmt,outfmt,verbose = 0):
+    db = gffutils_import_gxf(infile)
+    # Create a dictionary to store the longest transcript for each gene
+    g2tid = {}
+    g2t = {}
+    # Iterate over all genes in the database
+    cnt = 1
+    for gene in db.features_of_type('gene'):
+        transcripts = [x for x in db.children(gene, featuretype='transcript')]
+        if len(transcripts)>0:
+            lengths = {x.id:x.end-x.start for x in transcripts}
+            t2model= {x.id:x for x in transcripts}
+            g2tid[gene.id] = max(lengths, key=lengths.get)
+            g2t[gene.id] = t2model[max(lengths, key=lengths.get)]
+        else:
+            if(verbose > 1):
+                print('select_longest_transcript: no transcripts found for gene %s!' % gene.id)
+        cnt += 1 
+    if verbose:
+        print('%s genes - %s transcripts' % (cnt,len(g2t)))
+    
+    with open(outfile,'w') as ofile:
+            for i,gene in enumerate(db.features_of_type("gene")):
+                if gene.id in g2tid:
+                    # check if there is a gene_id 
+                    if outfmt == 'gtf':
+                        ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+                        transcript = g2t[gene.id]
+                        transcript_id = transcript.id
+                        ofile.write(str(transcript) + '\n')
+                        for child in db.children(transcript_id):
+                            ofile.write(str(child)+ '\n')
+
+                    if outfmt == 'gff':
+                        ofile.write(str_gff(gene,attributes = ['ID']) + ';\n')
+                        # write the gene:
+                        #o = "\t".join([gene.chrom,gene.source,str(gene.start),str(gene.end),'.',gene.strand,'.','gene_id "' + gene.id + '"'])
+                        #ofile.write(o + '\n')         
+                        transcript = g2t[gene.id]
+                        transcript_id = transcript.id
+                        ofile.write(str(transcript) + '\n')
+                        for child in db.children(transcript_id):
+                            ofile.write(str(child)+ '\n')
+
+
 
 
 ######################### 5' clipping ########################################

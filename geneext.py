@@ -1,8 +1,8 @@
-######################################################################################################## 
+#!/usr/bin/env python3
+
 import argparse
 from argparse import RawTextHelpFormatter
 from geneext import helper
-import logging
 import os
 from os import path
 import sys
@@ -12,18 +12,11 @@ from rich.progress import Progress
 from rich.panel import Panel
 from rich.text import Text
 from rich.markup import escape
-console = Console()
-# Tool logo
-with open('./geneext/ascii.txt', 'r') as file:
-    ascii_art = file.read()
-ascii_art = escape(ascii_art)
-console.print(ascii_art, style="bold blue")
-
 
 parser = argparse.ArgumentParser(description=
 """
-Program: GeneExt (Extend genes in 3' direction using single-cell RNA-seq data)
-Version: 1.0
+Program: GeneExt
+Version: 0.8
 """,
                            formatter_class=RawTextHelpFormatter)
 parser.add_argument('-g', default= None,help = 'Genome .gtf/.gff/.bed file.' ,required = True) 
@@ -35,7 +28,7 @@ parser.add_argument('-inf', default = None, help = 'Input genes file format, if 
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = None, help = 'Temporary directory. [tmp_{output_file_prefix}]')
 parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]')
-parser.add_argument('-v', default = int(1), help = 'Verbosity level. 0,[1],2,3')
+parser.add_argument('-v', default = int(0), help = 'Verbosity level. [0],1,2,3')
 parser.add_argument('-j', default = '1', help = 'Number of parallel cores. [1]')
 parser.add_argument('--output_mode', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_transcript]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
 parser.add_argument('--clip_mode',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
@@ -54,8 +47,14 @@ parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt wi
 parser.add_argument('--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
 
 
-########### Parse Arguments ################
-############################################
+
+
+console = Console()
+# Tool logo
+with open('./geneext/ascii.txt', 'r') as file:
+    ascii_art = file.read()
+ascii_art = escape(ascii_art)
+console.print(ascii_art, style="bold blue")
 
 ########### Pipeline Functions ################
 ###############################################
@@ -83,9 +82,8 @@ def pipeline_error_print(x=None):
     #os.system('cat %s/geneext/err.txt' % scriptloc)
     quit()
 def print_task(x):
-    console.print(' %s ...' % x,style = 'bold yellow', end = end)
+    console.print('%s ...' % x,style = 'bold yellow', end = end)
 
-#######################################################################################
 
 def parse_input_format():
     if args.inf is not None:
@@ -124,7 +122,6 @@ def compare_infmt_outfmt(infmt,outfmt):
     if infmt != outfmt:
         pipeline_error_print('Please, make sure the input and the output have the same format!')
 
-##########################################################################
 
 def run_peakcalling():
     helper.split_strands(bamfile,tempdir,verbose = verbose,threads = threads)
@@ -133,7 +130,6 @@ def run_peakcalling():
     helper.collect_macs_beds(outdir = tempdir,outfile = rawpeaks,verbose = verbose)
 
 
-############# Orphan peaks functions ##############
 def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_bed = None,infmt = None, outfmt = None,verbose = False,merge = False):
         """Store peaks not falling within new genic regions as orphan peaks """
         if infmt != 'bed':
@@ -264,9 +260,10 @@ def run_genefile_fix(genefile):
     if not 'transcript' in features:
         console.print('\nGenome annotation warning: Could not find "transcript" features in %s! Trying to fix ...' % genefile,style = 'white')
         if 'mRNA' in features:
-            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-            fext = genefile.split('/')[-1].split('.')[-1]
-            genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            #fext = genefile.split('/')[-1].split('.')[-1]
+            #genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            genefilewmrna = helper.append_before_ext(genefile,'fixed')
             #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
             if verbose > 0:
                 print('Found "mRNA" features - renaming as transcripts ...')
@@ -277,24 +274,29 @@ def run_genefile_fix(genefile):
         else:
             if verbose > 0:
                 console.print('Missing "mRNA" features in file - adding',style = 'bold red')
-            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-            fext = genefile.split('/')[-1].split('.')[-1]
-            genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            #fext = genefile.split('/')[-1].split('.')[-1]
+            #genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
+            genefilewmrna = helper.append_before_ext(genefile,'fixed')
             #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addtranscripts.' + infmt)
             helper.add_transcript_features(infile = genefile, outfile = genefilewmrna,verbose = verbose)
             genefile = genefilewmrna
             if verbose > 0:
                 print("New file name: %s" % genefile)
     if not 'gene' in features:
-        print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
-        fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1]).replace('.fixed','')
-        fext = genefile.split('/')[-1].split('.')[-1]
-        genefilewgenes = tempdir + '/' + fpref + '.fixed.' + fext
+        #print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
+        console.print('\nGenome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile,style = 'white')
+        #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1]).replace('.fixed','')
+        #fext = genefile.split('/')[-1].split('.')[-1]
+        #genefilewgenes = tempdir + '/' + fpref + '.fixed.' + fext
+        genefilewgenes = helper.append_before_ext(genefile,'fixed')
         #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
         helper.add_gene_features(infile = genefile,outfile = genefilewgenes,infmt = infmt,verbose = verbose)
-        print('Fix done, annotation with gene features: %s' % genefilewgenes )
+        if verbose > 0:
+            print('Fix done, annotation with gene features: %s' % genefilewgenes )
         genefile = genefilewgenes
-        print("New file name: %s" % genefile)
+        if verbose > 0:
+            print("New file name: %s" % genefile)
     return(genefile)
 
 
@@ -302,9 +304,17 @@ def run_genefile_fix(genefile):
 ########### Main #####################
 ######################################
 
+########### Parse Arguments ################
+############################################
+
+
 if __name__ == "__main__":
     
     args = parser.parse_args()
+    outputfile = args.o
+    if not outputfile:
+        pipeline_error_print('Please, provide the output file name (-o)!')
+
     bamfile = args.b
     tempdir = args.t
     verbose = int(args.v)
@@ -317,7 +327,7 @@ if __name__ == "__main__":
     peaksfile = args.p
     genefile = args.g 
 
-    outputfile = args.o
+    
     
     maxdist = args.m
     #extension_mode = args.e # the option has been removed for clarity 
@@ -363,6 +373,8 @@ if __name__ == "__main__":
         logfilename = "GeneExt.log"
     sys.stdout = Logger(logfilename)
 
+    do_longest = True # whether to select the longest transcript per gene 
+
 #################################################################
 
 
@@ -378,18 +390,18 @@ if __name__ == "__main__":
         print('================================================')
         print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.g))
 
-    #console.print('======== Preflight checks ======================',style = 'bold yellow',end = end)
-    console.print(Panel.fit("[bold blue]Preflight checks[/bold blue]", border_style="blue"), end = end)
+    console.print(Panel.fit("[bold blue]Preflight checks[/bold blue]", border_style="bold blue"), end = end)
 
 #################################################################
     # check if temporary directory exits;
     if tempdir is None:
-        tempdir = 'tmp_' + outputfile.split('.')[0] 
+        tempdir = helper.get_prefixed_path(outputfile,prefix = 'tmp_')
         if verbose > 0:
             print("Temporary directory isn't set, setting to %s/" % tempdir)
     else:
         if verbose > 0:
             print("Temporary directory is set to %s/" % tempdir)
+
     # check if this temporary directory exists:
 
     if path.isdir(tempdir):
@@ -476,8 +488,11 @@ if __name__ == "__main__":
     if(outfmt == 'bed'):
         pipeline_error_print("I can't output .bed yet!")
     compare_infmt_outfmt(infmt,outfmt)
+    
     ####################################################
-    # Check and fix the input file
+    # Fix the input annotation 
+    ####################################################
+
     if infmt in ['gff','gtf']:
         # check if the fixed version already exists:
         fixed_file_name = tempdir + '/' + genefile.replace('.','.fixed.')
@@ -486,6 +501,15 @@ if __name__ == "__main__":
             genefile = fixed_file_name
         else:
             genefile = run_genefile_fix(genefile)
+
+        if do_longest:
+            new_genefile = helper.append_before_ext(genefile,'fixed')
+            if verbose:
+                print('Selecting the longest transcript per gene ...',end = " ")
+            helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose)
+            if verbose:
+                print('done')
+            genefile = new_genefile
 
         # Fix 5'overlaps 
         if do_5clip:
@@ -499,7 +523,7 @@ if __name__ == "__main__":
             genefile = genefile5clip
     console.print('done',style = 'bold green')
 
-    console.print(Panel.fit("[bold cyan]Pipeline[/bold cyan]", border_style="cyan"))
+    console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
     ##################################################
     if not do_fix_only:
         # parse input file format: 
@@ -516,11 +540,11 @@ if __name__ == "__main__":
 
         # 0. MAPPING - not implemented     
             if do_mapping:
-                console.print(' Running mapping ...',style = 'bold yellow', end = end)
+                print_task('Running mapping')
                 raise(NotImplementedError())
         # 0.1 BAM SUBSAMPLING  
             if do_subsample:
-                console.print(' Running subsampling ...',style = 'bold yellow', end = end)
+                print_task('Running subsampling')
                 # check if subsampled
                 if found_subsampled and not do_force:
                     print('Found %s! Skipping subsampling' % subsampled_bam)
@@ -648,5 +672,4 @@ if __name__ == "__main__":
         elif bamfile:
             print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
-        console.print(Panel.fit(Text("Pipeline done!", style="bold green"), border_style="green"))
-
+        console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))

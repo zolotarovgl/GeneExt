@@ -115,5 +115,7 @@ Manual:
 - [x] peplace peakp with --peak_perc
 - [x] make --estimate default and remove the option  
 - [x] add force option - rerunning everything each time 
+- [ ] add reporting missing transcripts per gene  
 - [ ] introduce picking the longest isoform per gene 
-- [ ] update the manual
+- [ ] update the manual  
+- [ ] add extensive logging - all error messages should be written to the temporary directory log  
