@@ -51,12 +51,7 @@ parser.add_argument('--force', action='store_true', help = 'If set, GeneExt will
 
 
 
-console = Console()
-# Tool logo
-with open('./geneext/ascii.txt', 'r') as file:
-    ascii_art = file.read()
-ascii_art = escape(ascii_art)
-console.print(ascii_art, style="bold blue")
+
 
 ########### Pipeline Functions ################
 ###############################################
@@ -188,6 +183,7 @@ def report_extensions(file_path,n_genes = None):
     else:
         console.print('No genes could be extended',style = 'bold red')
 
+
 def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
     toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or  x[0] == '_']
@@ -195,34 +191,6 @@ def clean_tmp(tempdir = None):
         if verbose > 0:
             print("Removing %s" % file)
         os.remove(file)
-
-def report_stats(filename=None,Ntot=None,Nmap=None,Ngen=None,Nigen=None,Norph=None):
-    """Report mapping statistics in a way similar to cellranger"""
-    o = '%s:\nTotal reads: %s\nMapped reads: %s (total: %s %%)\nGenic reads: %s (total: %s %%; mapped: %s %%)\nOrphan peaks: %s (total: %s %%; mapped: %s %%)\nIntergenic reads: %s (total: %s %%; mapped: %s %%)' % (filename,str(Ntot),str(Nmap),str(round(Nmap/Ntot*100,2)),str(Ngen),str(round(Ngen/Ntot*100,2)),str(round(Ngen/Nmap*100,2)),str(Norph),str(round(Norph/Ntot*100,2)),str(round(Norph/Nmap*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2)),str(round(Nigen/Nmap*100,2)))
-    return(o)
-
-
-def estimate_mapping(tempdir = None,bamfile = None,infmt = None,threads = 1, verbose = False):
-        # TODO: add orphan peak estimate in case there are orphan peaks? 
-        # if orphan peaks present, estimate maping in the orphan peaks as well. 
-        genicbed = tempdir + '/genic.bed'
-        intergenicbed = tempdir + '/intergenic.bed'
-        chrsizesfile = tempdir + '/chr_sizes.tab'
-
-        helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
-        helper.get_genic_beds(genomeanno=genefile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
-        Ntot, Nmap, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
-        old_rep = report_stats(genefile,Ntot,Nmap,Ngen,Nigen)
-        helper.get_genic_beds(genomeanno=outputfile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
-        Ntot, Nmap, Ngen, Nigen = helper.estimate_mapping(bamfile = bamfile,genicbed= genicbed,intergenicbed=intergenicbed,threads=threads,verbose = verbose)
-        new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen)
-        print(old_rep)
-        print(new_rep)
-
-        with open(tempdir + '/mapping_stats.txt','w') as outfile:
-            outfile.write(old_rep + '\n')
-            outfile.write(new_rep + '\n')
-        outfile.close()
 
 def estimate_mapping(tempdir = None,bamfile = None,genefile = None,infmt = None,threads = 1, verbose = False,orphanbed = None):
         # TODO: add orphan peak estimate in case there are orphan peaks? 
@@ -250,7 +218,14 @@ def estimate_mapping(tempdir = None,bamfile = None,genefile = None,infmt = None,
             Norph = 0
         return(Ntot,Nmap,Ngen,Nigen,Norph)
 
+# reporting mapping stats
+def report_stats(filename=None,Ntot=None,Nmap=None,Ngen=None,Nigen=None,Norph=None):
+    """Report mapping statistics in a way similar to cellranger"""
+    o = '%s:\nTotal reads: %s\nMapped reads: %s (total: %s %%)\nGenic reads: %s (total: %s %%; mapped: %s %%)\nOrphan peaks: %s (total: %s %%; mapped: %s %%)\nIntergenic reads: %s (total: %s %%; mapped: %s %%)' % (filename,str(Ntot),str(Nmap),str(round(Nmap/Ntot*100,2)),str(Ngen),str(round(Ngen/Ntot*100,2)),str(round(Ngen/Nmap*100,2)),str(Norph),str(round(Norph/Ntot*100,2)),str(round(Norph/Nmap*100,2)),str(Nigen),str(round(Nigen/Ntot*100,2)),str(round(Nigen/Nmap*100,2)))
+    return(o)
+
 def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None,infmt = None,threads = 1, verbose=False,orphanbed = None,onlyestimate = True):
+    # this function deterines mapping stats and writes them to the tempdir + "/mapping_stats.txt" file.
     statsfile = tempdir + "/mapping_stats.txt"
     if onlyestimate:
         Ntot,Nmap,Ngen,Nigen,Norph = estimate_mapping(tempdir = tempdir,bamfile = bamfile,genefile = genefile,infmt = infmt,threads = threads, verbose =verbose,orphanbed = None)
@@ -261,13 +236,56 @@ def run_estimate(tempdir = None,bamfile = None,genefile = None,outputfile = None
         old_rep = report_stats(genefile,Ntot,Nmap,Ngen,Nigen,Norph)
         Ntot,Nmap,Ngen,Nigen,Norph = estimate_mapping(tempdir = tempdir,bamfile = bamfile,genefile = outputfile,infmt = infmt,threads = threads, verbose = verbose,orphanbed = orphanbed)
         new_rep = report_stats(outputfile,Ntot,Nmap,Ngen,Nigen,Norph)
-        print(old_rep)
-        print(new_rep)
     with open(statsfile,'w') as ofile:
-        ofile.write(old_rep)
+        ofile.write(old_rep + '\n')
         if not onlyestimate:
             ofile.write(new_rep)
     ofile.close()
+
+def summarize_intergenic_diff(file_path):
+    """
+    Summarize the difference in intergenic read proportions between two sets of results,
+    including the file names.
+
+    :param file_path: Path to the file containing the results.
+    :return: A string with the difference in intergenic read proportions and file names.
+    """
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    intergenic_reads = []
+    file_names = []
+    for i, line in enumerate(lines):
+        if "/" in line:
+            # Capture the file name
+            file_name = line.strip().split(':')[0]
+            file_names.append(file_name)
+        if 'Intergenic reads' in line:
+            # Find the start of the percentage value, assuming the format 'Intergenic reads: NUMBER (total: PERCENTAGE %'
+            start = line.find('(total: ') + len('(total: ')
+            end = line.find('%', start)
+            # Extract the percentage value and convert it to a float
+            percentage = float(line[start:end].strip())
+            intergenic_reads.append(percentage)
+
+    # Calculate the difference in intergenic read proportions
+    if len(intergenic_reads) == 2 and len(file_names) == 2:
+        difference = abs(intergenic_reads[0] - intergenic_reads[1])
+        return (f"Difference in intergenic read proportions: {difference:.2f}%")
+    else:
+        return "Could not find two sets of intergenic read proportions or file names."
+
+def report_estimate():
+        if do_orphan:
+            orphanbed = tempdir + '/orphan_merged.bed'
+        else:
+            orphanbed = None
+        run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = orphanbed,onlyestimate = False)
+        # TODO: add parsing of the  tempdir + "/mapping_stats.txt" file. Report nicely. 
+        console.print(summarize_intergenic_diff(tempdir + "/mapping_stats.txt"),style = 'bold green')
+
+
+
 
     # depends on whether it was called only multple files or ont 
 def run_genefile_fix(genefile):
@@ -330,7 +348,10 @@ def run_genefile_fix(genefile):
 
 
 if __name__ == "__main__":
-    
+
+    console = Console()
+    helper.print_logo(console)
+
     args = parser.parse_args()
     outputfile = args.o
     if not outputfile:
@@ -696,3 +717,4 @@ if __name__ == "__main__":
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
         report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
+        report_estimate()

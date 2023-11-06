@@ -9,6 +9,30 @@ from functools import partial
 import time
 
 
+# visuals
+
+def print_logo(console):
+    # Tool logo
+    #with open('./geneext/ascii.txt', 'r') as file:
+    #   ascii_art = file.read()
+    #ascii_art = escape(ascii_art)
+    text1 = """
+      ____                 _____      _   
+     / ___| ___ _ __   ___| ____|_  _| |_ 
+    | |  _ / _ \ '_ \ / _ \  _| \ \/ / __|
+    | |_| |  __/ | | |  __/ |___ >  <| |_ 
+     \____|\___|_| |_|\___|_____/_/\_\\__|
+     
+          ______    ___    ______    
+    -----[______]==[___]==[______]"""
+    text2 = "===>"
+    text3 = "----\n\n    Gene model adjustment for improved single-cell RNA-seq data counting\n\n"
+    console.print(text1, style="bold blue",end = '')
+    console.print(text2, style="bold yellow",end = '')
+    console.print(text3, style="bold blue")
+
+
+
 # directory handling 
 
 def get_prefixed_path(file_path, prefix='tmp_'):
