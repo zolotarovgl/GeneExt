@@ -29,12 +29,13 @@ parser.add_argument('-m', default = None, help = 'Maximal distance for gene exte
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = None, help = 'Temporary directory. [tmp_{output_file_prefix}]')
+parser.add_argument('--rerun', action='store_true', help = 'Use this to rerun the analysis.')
 parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]')
 parser.add_argument('-v', default = int(0), help = 'Verbosity level. [0],1,2,3')
 parser.add_argument('-j', default = '1', help = 'Number of parallel cores. [1]')
 parser.add_argument('--output_mode', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_transcript]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
-parser.add_argument('--clip_mode',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
-parser.add_argument('--clip5', action='store_true', help = "Use this to clip 5' overlaps between genes. The downstream gene will be clipped.\nCAVE: use carefully if the genome contains many overlapping genes (e.g. mitochondrial genomes).\n\n\n================ Orphan peaks ================\n")
+parser.add_argument('--clip_strand',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
+parser.add_argument('--clip_5prime', action='store_true', help = "Use this to clip 5' overlaps between genes. The downstream gene will be clipped.\nCAVE: use carefully if the genome contains many overlapping genes (e.g. mitochondrial genomes).\n\n\n================ Orphan peaks ================\n")
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
 parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [10000]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
@@ -115,9 +116,9 @@ def parse_output_format():
         pipeline_error_print('Unknown output format "%s"!\nPlease either make sure the format is written properly or specify it yourself using --ouf option.' % outfmt)
     return(outfmt)      
 
-def compare_infmt_outfmt(infmt,outfmt):
-    if infmt != outfmt:
-        pipeline_error_print('Please, make sure the input and the output have the same format!')
+#def compare_infmt_outfmt(infmt,outfmt):
+#    if infmt != outfmt:
+#        pipeline_error_print('Please, make sure the input and the output have the same format!')
 
 
 def run_peakcalling():
@@ -288,19 +289,15 @@ def report_estimate():
 
 
     # depends on whether it was called only multple files or ont 
-def run_genefile_fix(genefile):
+def run_genefile_fix(genefile,infmt):
     # Given an input file, check if it's missing "gene" and "transcript" features, if so, fix it and output an updated file name 
     features = helper.get_featuretypes(genefile)
     if not 'transcript' in features:
         console.print('Genome annotation warning: Could not find "transcript" features in %s! Trying to fix ...' % genefile,style = 'white')
         if 'mRNA' in features:
-            #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-            #fext = genefile.split('/')[-1].split('.')[-1]
-            #genefilewmrna = tempdir + '/' + fpref + '.fixed.' + fext
-            new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
-            #genefilewmrna = helper.append_before_ext(genefile,'fixed')
             
-            #genefilewmrna = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_mRNA2transcript.' + infmt)
+            #new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+            new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
             if verbose > 0:
                 print('Found "mRNA" features - renaming as transcripts ...')
             helper.mRNA2transcript(infile = genefile,outfile = new_genefile, verbose = verbose)
@@ -324,10 +321,9 @@ def run_genefile_fix(genefile):
     if not 'gene' in features:
         #print('Could not find "gene" features in %s! Trying to fix ...' % genefile)
         console.print('Genome annotation warning: Could not find "gene" features in %s! Trying to fix ...' % genefile,style = 'white')
-        #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1]).replace('.fixed','')
-        #fext = genefile.split('/')[-1].split('.')[-1]
-        #genefilewgenes = tempdir + '/' + fpref + '.fixed.' + fext
-        new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+
+        #new_genefile = tempdir + '/' + helper.append_before_ext(os.path.basename(genefile),'fixed')
+        new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
 
         #genefilewgenes = tempdir + '/' + genefile.split('/')[-1].replace('.' + infmt,'_addgenes.' + infmt)
         helper.add_gene_features(infile = genefile,outfile = new_genefile,infmt = infmt,verbose = verbose)
@@ -337,7 +333,7 @@ def run_genefile_fix(genefile):
         if verbose > 0:
             print("New file name: %s" % genefile)
     return(genefile)
-
+    
 
 
 ########### Main #####################
@@ -358,7 +354,10 @@ if __name__ == "__main__":
         pipeline_error_print('Please, provide the output file name (-o)!')
 
     bamfile = args.b
+
     tempdir = args.t
+    do_rerun = args.rerun
+    
     verbose = int(args.v)
 
     # for console printing 
@@ -368,7 +367,6 @@ if __name__ == "__main__":
         end = "\n"
     peaksfile = args.p
     genefile = args.g 
-
     
     
     maxdist = args.m
@@ -378,7 +376,7 @@ if __name__ == "__main__":
 
     threads = int(args.j)
     tag = args.tag
-    clip_mode = args.clip_mode
+    clip_mode = args.clip_strand
 
     # peak coverage percentile:
     #mean_coverage = args.mean_coverage # the option has been removed for clarity. By default, the peaks are now filtered using normalized coverage
@@ -403,7 +401,7 @@ if __name__ == "__main__":
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
 
     # Clipping 5'-overlaps 
-    do_5clip = args.clip5
+    do_5clip = args.clip_5prime
     #do_5clip = True
 
     # Force 
@@ -438,7 +436,8 @@ if __name__ == "__main__":
 #################################################################
     # check if temporary directory exits;
     if tempdir is None:
-        tempdir = helper.get_prefixed_path(outputfile,prefix = 'tmp_')
+        #tempdir = helper.get_prefixed_path(outputfile,prefix = 'tmp_')
+        tempdir = 'tmp' # use the common temp directory name 
         if verbose > 0:
             print("Temporary directory isn't set, setting to %s/" % tempdir)
     else:
@@ -451,6 +450,8 @@ if __name__ == "__main__":
         if verbose > 0:
             print("Temporary directory %s/ found!" % tempdir)
             found_tempdir = True
+        if not do_rerun:
+            pipeline_error_print('Found existing temporary directory %s/.\nDelete the directory or, use --rerun option.' % tempdir)
     else:
         os.mkdir(tempdir)
         if verbose > 0:
@@ -470,7 +471,7 @@ if __name__ == "__main__":
     found_subsampled = path.isfile(subsampled_bam)
     found_macs2 = path.isfile(macs2_peaks_file)
     found_covfile = path.isfile(covfile) and path.isfile(peaksfilt) and path.isfile(peaksfilt)
-    
+
 ##################################################################
     if not do_fix_only:
         # parse input and output formats - run the pipeline accordingly
@@ -530,25 +531,27 @@ if __name__ == "__main__":
     outfmt = parse_output_format()
     if(outfmt == 'bed'):
         pipeline_error_print("I can't output .bed yet!")
-    compare_infmt_outfmt(infmt,outfmt)
+    #compare_infmt_outfmt(infmt,outfmt)
     
     ####################################################
     # Fix the input annotation 
     ####################################################
 
     if infmt in ['gff','gtf']:
+        print(genefile)
         # check if the fixed version already exists:
         fixed_file_name = tempdir + '/' + genefile.replace('.','.fixed.')
         if os.path.exists(fixed_file_name) and not do_force:
             print('Found fixed genome file: %s' % fixed_file_name)
             genefile = fixed_file_name
         else:
-            genefile = run_genefile_fix(genefile)
-
+            genefile = run_genefile_fix(genefile,infmt)
         if do_longest:
-            new_genefile = helper.append_before_ext(genefile,'fixed')
+            #new_genefile = helper.append_before_ext(genefile,'fixed')
+            new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
             if verbose:
                 print('Selecting the longest transcript per gene ...',end = " ")
+
             helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose)
             if verbose:
                 print('done')
@@ -558,12 +561,14 @@ if __name__ == "__main__":
         if do_5clip:
             print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
             # rename the file properl y
-            fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
-            fext = genefile.split('/')[-1].split('.')[-1]
-            genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
-            helper.clip_5_overlaps(infile = genefile,outfile = genefile5clip,threads = threads,verbose = verbose)
-            print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,genefile5clip))
-            genefile = genefile5clip
+            #fpref = '.'.join(genefile.split('/')[-1].split('.')[:-1])
+            #fext = genefile.split('/')[-1].split('.')[-1]
+            #genefile5clip = tempdir + '/' + fpref + '_5clip.' + fext
+            new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
+            helper.clip_5_overlaps(infile = genefile,outfile = new_genefile,threads = threads,verbose = verbose)
+            if verbose > 2:
+                print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
+            genefile = new_genefile
     #console.print('done',style = 'bold green')
 
     console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
@@ -589,7 +594,7 @@ if __name__ == "__main__":
             if do_subsample:
                 print_task('Running subsampling')
                 # check if subsampled
-                if found_subsampled and not do_force:
+                if found_subsampled and not do_force and verbose > 0:
                     print('Found %s! Skipping subsampling' % subsampled_bam)
                 else:
                     nsubs = int(args.subsamplebam)
@@ -709,12 +714,13 @@ if __name__ == "__main__":
                         run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = False)
                 else:
                     print("No bamfile specified - omitting mapping estimation")
-            if do_clean:
-                #print('======== Cleaning temporary directory ==========')
-                clean_tmp(tempdir = tempdir)
         elif bamfile:
             print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
-        report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
-        report_estimate()
+        if do_estimate:
+            report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
+            report_estimate()
+        if do_clean:
+            # clean big files
+            clean_tmp(tempdir = tempdir)

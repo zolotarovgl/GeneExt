@@ -5,13 +5,13 @@
 Genomes often have incomplete annotations of their 3-prime untranslated regions (3'-UTRs). At the same time, some of the most popular single-cell RNA sequencing methods are biased towards 3' ends of mRNA molecules. In result, this creates a bias in gene counting for genes with missing fragments of 3'-UTRs:   
 ![Gene_counting](./img/gene_counting_problem.png)
 
-To mitigate this effect, `GeneExt` will try to extend the genes in your reference genome by __using the scRNA-seq dataset itself__ (or any 3'-biased type of transcriptomics data). This approach should increase the number of UMI counts registered per gene. In addition, `GeneExt` also fixes overlapping portions of genes. 
+`GeneExt` aims to enhance gene models in the reference genome by leveraging the scRNA-seq data itself (or similar 3'-biased transcriptomics data). `GeneExt` not only improves UMI count accuracy per gene but also resolves gene overlap issues.
 
 ## How it works  
 
 ![Pipeline](./img/pipeline.png)
 
-1. `GeneExt` is accepts alignment files of reads from any 3'-end biased single-cell or bulk RNA-seq protocol. It will then call peaks from this data using `macs2` software and will try to extend genes to the peaks located downstream. Alternatively, if you already have peaks you want to extend the genes to (e.g. somehow determined mRNA cleavage site coordinates), having `macs2` installed is not necessary. 
+1. `GeneExt` accepts alignment files from any 3'-end biased single-cell (or bulk RNA-seq) protocol. It will then call peaks from this data using `macs2` software. 
 2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an `-m` parameter (see below).  
 3. After genes are extended, `GeneExt` will write an output file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
 
@@ -26,12 +26,12 @@ To run `GeneExt`, you will need the following:
 * `gff` &rarr; `gtf`  
 * `gtf` &rarr; `gtf`  
 
-In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their 9-th column attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting)).
-Please, make sure your genome annotation file is properly formatted!   
+In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting)).
+Please, ensure your genome annotation file is properly formatted!   
 
 ## How to get a .bam file?   
 
-If you already have used `cellranger`, then you can simply use its `.bam` file (`[OUTPUT]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
+If you already have used `cellranger`, then you can simply use its `.bam` file (`[cellranger_output_directory]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
 Note: for now, `GeneExt` only accepths a single alignment file, so if you have multiple sequencing datasets, you should concatenate your scRNA-seq fastq file for the following step:  
 
@@ -165,8 +165,7 @@ see [Input troubleshooting](##Input-troubleshooting)
 2. Split your bam files by chromosomes:  
   You can split your genome into individual chromosomes / contigs and run `GeneExt` on each of them separately  
 
-## I get hundreds of thoursands of peaks. How should I filter them?   
-
+## I get too many peaks. How should I filter them?   
 The results of peak calling depend on the  dataset quality. By default, `GeneExt` filters the peaks based on the coverage __before__ gene extension.  
 However, as is stated above, having many "orphan" peaks in your annotation __will not affect gene counting__ but may help preserving valuable information about cell type heterogeneity in the data.    
 

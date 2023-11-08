@@ -9,7 +9,7 @@ from functools import partial
 import time
 
 
-# visuals
+# visual
 
 def print_logo(console):
     # Tool logo
@@ -269,6 +269,7 @@ def parse_gff(infile,featuretype = None):
     with open(infile) as file:
             lines = [line.rstrip().split('\t') for line in file if not '#' in line]
             if not featuretype:
+                # get all features
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gff_get_ID(str(x[8])),strand = str(x[6])) for x in lines]
             else:
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gff_get_ID(str(x[8])),strand = str(x[6])) for x in lines if x[2] == featuretype]
@@ -602,11 +603,12 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         elif outfmt == 'gtf':
                             feature['gene_id'] = feature['ID']
                             #fout.write(replace_gff_gtf(str(feature)))
-                            fout.write(str_gtf(feature)+'\n')
-                            
                             # ADD GENEID TO MRNA 
                             mrna['gene_id'] = mrna['Parent']
                             mrna['transcript_id'] = mrna['ID']
+
+
+                            fout.write(str(feature)+'\n')
                             if write_original_transcript:
                                 fout.write(str_gtf(mrna)+'\n')
                                 for exon in db.children(mrna_id,featuretype = ['exon']):
@@ -647,8 +649,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                                         exon.source = tag
                                     fout.write(str(exon) + '\n')                                                      
                             if mrna.strand == '+':
-                                fout.write(str(last_exon) + '\n')
-                                
+                                fout.write(str(last_exon) + '\n')   
                         elif infmt == 'gff' and outfmt == 'gtf':
                             fout.write(str_gtf(mrna)+'\n')
                             if mrna.strand == '-':
@@ -680,6 +681,13 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         if not 'transcript_id' in [x for x in mrna.attributes]:
                             mrna['transcript_id'] = mrna['gene_id']
 
+                        # write original gene feature
+                        if outfmt == 'gtf':
+                            fout.write(str(feature)+'\n')
+                        elif outfmt == 'gff':
+                            raise(NotImplementedError())
+                        else:
+                            raise(NotImplementedError())
 
                         if write_original_transcript:
                             # Write down original gene and mRNA:
@@ -691,6 +699,8 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                                         if not str(child_exon) in written_exons:
                                             fout.write(str(child_exon)+'\n')
                                             #written_exons = written_exons + [str(child_exon)]
+                            else:
+                                raise(NotImplementedError())
                         if mrna.strand == "+":
                             mrna.end = last_exon.end
                         elif mrna.strand == "-":
@@ -711,13 +721,16 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                         if verbose > 2:
                             print('adding %s: [%s/%s]' % (mrna.id,cnt,len(extend_dictionary)))
                         cnt += 1
+                        if mrna.strand == '-':
+                            fout.write(str(last_exon) + '\n')
                         for child_exon in db.children(mrna_id,featuretype = 'exon'):
                             if not child_exon.id == last_exon.id and not str(child_exon) in written_exons:
                                 child_exon.source = tag
                                 child_exon['transcript_id'] = new_mrna_id
                                 fout.write(str(child_exon)+'\n')
                                 #written_exons = written_exons + [str(child_exon)]
-                        fout.write(str(last_exon) + '\n')
+                        if mrna.strand == '+':
+                            fout.write(str(last_exon) + '\n')
                         written_exons  = written_exons + [str(last_exon)]
                 elif extension_mode == 'new_exon':
                     raise(NotImplementedError())
@@ -1296,7 +1309,7 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 
 ######################### Longest transcript per gene ########################
 
-def select_longest_transcript(infile,outfile,infmt,outfmt,verbose = 0):
+def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False):
     db = gffutils_import_gxf(infile)
     # Create a dictionary to store the longest transcript for each gene
     g2tid = {}
@@ -1304,6 +1317,8 @@ def select_longest_transcript(infile,outfile,infmt,outfmt,verbose = 0):
     # Iterate over all genes in the database
     cnt = 1
     for gene in db.features_of_type('gene'):
+        if not gene.id and infmt == 'gtf': 
+            gene.id = gene[['gene_id']]
         transcripts = [x for x in db.children(gene, featuretype='transcript')]
         if len(transcripts)>0:
             lengths = {x.id:x.end-x.start for x in transcripts}
@@ -1317,6 +1332,7 @@ def select_longest_transcript(infile,outfile,infmt,outfmt,verbose = 0):
     if verbose:
         print('%s genes - %s transcripts' % (cnt,len(g2t)))
     
+
     with open(outfile,'w') as ofile:
             for i,gene in enumerate(db.features_of_type("gene")):
                 if gene.id in g2tid:
@@ -1339,7 +1355,6 @@ def select_longest_transcript(infile,outfile,infmt,outfmt,verbose = 0):
                         ofile.write(str(transcript) + '\n')
                         for child in db.children(transcript_id):
                             ofile.write(str(child)+ '\n')
-
 
 
 
