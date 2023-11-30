@@ -50,7 +50,7 @@ parser.add_argument('--orphan_maxdist', default = int(1000), help = 'Orphan peak
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
-parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.\n\n\n================ Miscellaneous ================\n')
+parser.add_argument('--nocluster', action='store_true', help = 'Do not merge orphan peaks based on distance.\n\n\n================ Miscellaneous ================\n')
 
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 #parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
@@ -58,6 +58,8 @@ parser.add_argument('--keep_intermediate_files', action='store_true', help = 'Us
 #parser.add_argument('--estimate', action='store_true', help = 'Use this to just estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
 #parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
 parser.add_argument('--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
+parser.add_argument('--rerun', action='store_true', help = 'If set, GeneExt will try to re-run the analysis using previously computed files it finds in the temporary directory (subsampled data, MACS2 results, peaks with coverage etc.).')
+
 
 
 
@@ -191,6 +193,9 @@ def report_extensions(file_path,n_genes = None):
         num_rows = len(df)
         median_value = round(df.iloc[:, -1].median(), 1)
         console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
+        if do_orphan:
+            # report the number of orphan peaks / clusters added 
+            raise(NotImplementedError())
     else:
         console.print('No genes could be extended',style = 'bold red')
 
@@ -408,7 +413,7 @@ if __name__ == "__main__":
     do_fix_only = False # DEV
 
     do_orphan = args.orphan
-    do_orphan_merge =  do_orphan and not args.nomerge
+    do_orphan_merge =  do_orphan and not args.nocluster
 
     # Orphan merging defaults:
     orphan_maximum_distance =int(args.orphan_maxdist)
@@ -420,6 +425,8 @@ if __name__ == "__main__":
 
     # Force 
     do_force = args.force
+    # Rerun 
+    do_rerun = args.rerun
 
     # Logging 
     if outputfile:
@@ -464,8 +471,8 @@ if __name__ == "__main__":
         if verbose > 0:
             print("Temporary directory %s/ found!" % tempdir)
             found_tempdir = True
-        if not do_force:
-            pipeline_error_print('Found existing temporary directory %s/.\nDelete the directory or, use --force option.' % tempdir)
+        if not do_force and not do_rerun:
+            pipeline_error_print('Found existing temporary directory %s/.\nDelete the directory or, use --force or --rerun options.' % tempdir)
     else:
         os.mkdir(tempdir)
         if verbose > 0:
@@ -552,10 +559,9 @@ if __name__ == "__main__":
     ####################################################
 
     if infmt in ['gff','gtf']:
-        print(genefile)
         # check if the fixed version already exists:
         fixed_file_name = tempdir + '/' + genefile.replace('.','.fixed.')
-        if os.path.exists(fixed_file_name) and not do_force:
+        if do_rerun and os.path.exists(fixed_file_name) and not do_force:
             print('Found fixed genome file: %s' % fixed_file_name)
             genefile = fixed_file_name
         else:
@@ -600,6 +606,13 @@ if __name__ == "__main__":
                 if not orphan_maximum_size:
                     orphan_maximum_size = helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
 
+        #-1. Index input bam 
+        if bamfile:
+            if not os.path.isfile(bamfile + '.bai'):
+                if verbose > 0:
+                    print('Indexing %s' % bamfile)
+                helper.index_bam(bamfile,verbose = verbose,threads=threads)
+
         # 0. MAPPING - not implemented     
             if do_mapping:
                 print_task('Running mapping')
@@ -608,7 +621,7 @@ if __name__ == "__main__":
             if do_subsample:
                 print_task('Running subsampling')
                 # check if subsampled
-                if found_subsampled and not do_force and verbose > 0:
+                if do_rerun and found_subsampled and not do_force and verbose > 0:
                     print('Found %s! Skipping subsampling' % subsampled_bam)
                 else:
                     nsubs = int(args.subsamplebam)
@@ -632,7 +645,7 @@ if __name__ == "__main__":
             if do_macs2:
                 print_task('Running macs2')
                 peaksfile = tempdir + '/' + 'allpeaks.bed'
-                if found_macs2 and not do_force:
+                if do_rerun and found_macs2 and not do_force:
                     if verbose > 0:
                         print('Found %s! Skipping peak calling with MACS2.' % peaksfile)
                     console.print('done',style = 'bold green')
@@ -652,7 +665,7 @@ if __name__ == "__main__":
                 #console.print('======== Filtering macs2 peaks =================',style = 'bold yellow',end = end)
                 print_task('Filtering macs2 peaks')
 
-                if found_covfile and not do_force:
+                if do_rerun and found_covfile and not do_force:
                     if verbose > 0:
                         print('Found %s! Skipping peak filtering.' % covfile)
                     console.print('done',style = 'bold green')
@@ -734,7 +747,7 @@ if __name__ == "__main__":
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
 
         report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
-        
+
         if do_estimate:
             report_estimate()
         if do_clean:

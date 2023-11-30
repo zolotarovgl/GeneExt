@@ -17,7 +17,7 @@ conda install -c bioconda -c conda-forge gffutils bedtools numpy macs2 samtools 
 # Test run
 Once dependencies are installed, try running `GeneExt` with sample data:  
 ```
-python geneext.py -g [genome .bed/.gtf/.gff] -b [10x.bam] -o [output name]
+python geneext.py -g test_data/annotation.gtf -b test_data/alignments.bam -o result.gtf
 ```
 __CAVE:__ Please, first test whether the tool works properly on the test data! 
 
