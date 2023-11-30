@@ -26,6 +26,7 @@ parser.add_argument('-b', default= None,help = 'Input .bam file.')
 parser.add_argument('-p', default= None,help = 'Peaks .bed file. Incompatible with -b.\nIf provided, extension is performed using specified coordinates in .bed format.\n(Can be seful in cases of FLAM-seq / Nano-3P-seq data or when manual filtering of the peaks is needed.)') 
 parser.add_argument('-o', default = None, help = 'Output annotation file.\n\n\n================ Additional arguments ================\n',required = False)
 parser.add_argument('-m', default = None, help = 'Maximal distance for gene extension.\nIf not set, a median length of gene (genomic span!) is used.')
+
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = None, help = 'Temporary directory. [tmp_{output_file_prefix}]')
@@ -40,12 +41,13 @@ parser.add_argument('--orphan',action='store_true', help = 'Whether to add orpha
 parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [10000]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
-parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.\n\n\n================ Miscellaneous ================\n')
+parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
+parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.\n\n\n================ Miscellaneous ================\n')
+
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
 parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
 parser.add_argument('--keep_intermediate_files', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
 #parser.add_argument('--estimate', action='store_true', help = 'Use this to just estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
-parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.')
 parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
 parser.add_argument('--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
 
@@ -388,7 +390,8 @@ if __name__ == "__main__":
     do_macs2 = args.b is not None  
     do_subsample = args.subsamplebam is not None
     #do_estimate = args.estimate # the option has been removed for the sake of clarity 
-    do_estimate = False
+    do_estimate = True
+    do_estimate_only = False
     do_clean = not args.keep_intermediate_files
     do_report = args.report and do_macs2
     do_fix_only = args.onlyfix
@@ -575,7 +578,7 @@ if __name__ == "__main__":
     ##################################################
     if not do_fix_only:
         # parse input file format: 
-        if not do_estimate:    
+        if not do_estimate_only:    
             # if -m is not set, get a median gene size:
             if not maxdist:
                 maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
@@ -715,7 +718,7 @@ if __name__ == "__main__":
                 else:
                     print("No bamfile specified - omitting mapping estimation")
         elif bamfile:
-            print('--estimate is set. Skipping extension, estimating mapping rates for %s with %s' % (genefile,bamfile))
+            print('--estimate is set. Estimating mapping rates for %s with %s' % (genefile,bamfile))
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
         if do_estimate:

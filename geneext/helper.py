@@ -1488,14 +1488,19 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
     # Load the database
     if verbose > 1:
         print('Loading gene database.')
-    db = gffutils.create_db(
-        infile,
-        ":memory:",
-        disable_infer_genes=True,
-        disable_infer_transcripts=True,
-        merge_strategy="create_unique",
-        transform=gffutils_transform_func
-    )
+    #db = gffutils.create_db(
+    #    infile,
+    #    ":memory:",
+    #    disable_infer_genes=True,
+    #    disable_infer_transcripts=True,
+    #    merge_strategy="create_unique",
+    #    transform=gffutils_transform_func
+    #)
+
+    db = gffutils_import_gxf(infile,verbose = False)
+
+
+
     genes = [x for x in db.features_of_type("gene")]
     print("%s genes loaded." % len(genes))
     # Split the genes into chunks for each worker process
