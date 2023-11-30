@@ -23,8 +23,8 @@ To run `GeneExt`, you will need the following:
 2. Genome annotation in the `gff` or `gtf` format  
 
 `GeneExt` accepts following annotion input formats and converts them to the output:   
-* `gff` &rarr; `gtf`  
 * `gtf` &rarr; `gtf`  
+* `gff` &rarr; `gff`  
 
 In general, `GeneExt` will try to output a properly formatted `gtf` file that can be used as an input to `cellranger mkref`. However, since `gtf` files vary in their attributes, this may not always be possible (vis [Input troubleshooting](#input-troubleshooting)).
 Please, ensure your genome annotation file is properly formatted!   

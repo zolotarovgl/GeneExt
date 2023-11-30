@@ -19,7 +19,7 @@ Once dependencies are installed, try running `GeneExt` with sample data:
 ```
 python geneext.py -g test_data/annotation.gtf -b test_data/alignments.bam -o result.gtf
 ```
-__CAVE:__ Please, first test whether the tool works properly on the test data! 
+Please, first test whether the tool works properly on the test data! 
 
-For details and troubleshooting, please refer to the manual [manual](Manual.md).   
+For details on how to obtain alignment file, please refer to the manual [manual](Manual.md).   
 If problems persist, don't hesitate to contact the authors.
