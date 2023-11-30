@@ -30,25 +30,33 @@ parser.add_argument('-m', default = None, help = 'Maximal distance for gene exte
 parser.add_argument('-inf', default = None, help = 'Input genes file format, if None, will be guessed from a file extension.')
 parser.add_argument('-ouf', default = None, help = 'Output file format, if not given, will be guessed from a file extension.')
 parser.add_argument('-t', default = None, help = 'Temporary directory. [tmp_{output_file_prefix}]')
-parser.add_argument('--rerun', action='store_true', help = 'Use this to rerun the analysis.')
 parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to the fake gene source and IDs so these can be easily identified downstream. [GE]')
 parser.add_argument('-v', default = int(0), help = 'Verbosity level. [0],1,2,3')
 parser.add_argument('-j', default = '1', help = 'Number of parallel cores. [1]')
-parser.add_argument('--output_mode', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_transcript]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new exon - creates an extended last exon')
+parser.add_argument('--output_mode', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_transcript]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new_exon - creates an extended last exon')
 parser.add_argument('--clip_strand',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
-parser.add_argument('--clip_5prime', action='store_true', help = "Use this to clip 5' overlaps between genes. The downstream gene will be clipped.\nCAVE: use carefully if the genome contains many overlapping genes (e.g. mitochondrial genomes).\n\n\n================ Orphan peaks ================\n")
+parser.add_argument('--clip_5prime', action='store_true', help = 
+'''Use this to clip overlaps between genes. The downstream gene will be clipped.
+CAVE: use carefully if the genome contains many overlapping genes (e.g. mitochondrial genomes).
+
+================ Orphan peaks ================
+Orpan peaks are peaks that could not be assigned to any gene due to the distance.
+Since those can correspond to missing 3prime UTRs or missing genes, we suggest keeping them.
+Orphan peaks are merged into orphan peak clusters by distance and then are kept as if they were genes. 
+
+''')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--orphan_maxdist', default = int(10000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [10000]')
+parser.add_argument('--orphan_maxdist', default = int(1000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [median intron length, bp]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
 parser.add_argument('--nomerge', action='store_true', help = 'Do not merge orphan peaks based on distance.\n\n\n================ Miscellaneous ================\n')
 
 parser.add_argument('--subsamplebam',default = None, help = 'If set, will subsample bam to N reads before the peak calling. Useful for large datasets. Bam file should be indexed.\nDefault: None')
-parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
+#parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
 parser.add_argument('--keep_intermediate_files', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
 #parser.add_argument('--estimate', action='store_true', help = 'Use this to just estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
-parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
+#parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
 parser.add_argument('--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
 
 
@@ -358,7 +366,6 @@ if __name__ == "__main__":
     bamfile = args.b
 
     tempdir = args.t
-    do_rerun = args.rerun
     
     verbose = int(args.v)
 
@@ -390,11 +397,15 @@ if __name__ == "__main__":
     do_macs2 = args.b is not None  
     do_subsample = args.subsamplebam is not None
     #do_estimate = args.estimate # the option has been removed for the sake of clarity 
-    do_estimate = True
+    do_estimate = False # DEV
     do_estimate_only = False
     do_clean = not args.keep_intermediate_files
-    do_report = args.report and do_macs2
-    do_fix_only = args.onlyfix
+    
+    #do_report = args.report and do_macs2
+    do_report = False # DEV
+
+    #do_fix_only = args.onlyfix
+    do_fix_only = False # DEV
 
     do_orphan = args.orphan
     do_orphan_merge =  do_orphan and not args.nomerge
@@ -453,8 +464,8 @@ if __name__ == "__main__":
         if verbose > 0:
             print("Temporary directory %s/ found!" % tempdir)
             found_tempdir = True
-        if not do_rerun:
-            pipeline_error_print('Found existing temporary directory %s/.\nDelete the directory or, use --rerun option.' % tempdir)
+        if not do_force:
+            pipeline_error_print('Found existing temporary directory %s/.\nDelete the directory or, use --force option.' % tempdir)
     else:
         os.mkdir(tempdir)
         if verbose > 0:
@@ -721,8 +732,10 @@ if __name__ == "__main__":
             print('--estimate is set. Estimating mapping rates for %s with %s' % (genefile,bamfile))
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
+
+        report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
+        
         if do_estimate:
-            report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
             report_estimate()
         if do_clean:
             # clean big files
