@@ -46,8 +46,8 @@ Orphan peaks are merged into orphan peak clusters by distance and then are kept 
 
 ''')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--orphan_maxdist', default = int(1000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [median intron length, bp]')
-parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [median gene length, bp]')
+parser.add_argument('--orphan_maxdist', default = int(1000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [1000, bp]')
+parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [95th quantile of gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
 parser.add_argument('--nocluster', action='store_true', help = 'Do not merge orphan peaks based on distance.\n\n\n================ Miscellaneous ================\n')
@@ -186,16 +186,19 @@ def is_file_empty(file_path):
     with open(file_path, 'r') as file:
         return not any(file)
 
-def report_extensions(file_path,n_genes = None):
+def report_extensions(file_path,orphan_bed = None,n_genes = None):
     """Load a tabular file, report the number of rows and median value of the last column."""
     if not is_file_empty(file_path):
         df = pd.read_csv(file_path,sep = '\t')
         num_rows = len(df)
         median_value = round(df.iloc[:, -1].median(), 1)
         console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
-        if do_orphan:
+        if orphan_bed:
             # report the number of orphan peaks / clusters added 
-            raise(NotImplementedError())
+            df = pd.read_csv(orphan_bed,sep = '\t')
+            num_rows = len(df)
+            console.print('Added %s orphan peaks / clusters.' % num_rows,style = 'bold green')
+            
     else:
         console.print('No genes could be extended',style = 'bold red')
 
@@ -418,7 +421,7 @@ if __name__ == "__main__":
     # Orphan merging defaults:
     orphan_maximum_distance =int(args.orphan_maxdist)
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
-
+    maxsize_quant = 0.95
     # Clipping 5'-overlaps 
     do_5clip = args.clip_5prime
     #do_5clip = True
@@ -598,13 +601,14 @@ if __name__ == "__main__":
         if not do_estimate_only:    
             # if -m is not set, get a median gene size:
             if not maxdist:
-                maxdist = helper.get_median_gene_length(inputfile = genefile,fmt = infmt)
+                maxdist = helper.get_quantile_gene_length(inputfile = genefile,fmt = infmt,q = maxsize_quant)
                 if verbose:
                     print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
             # if maximum size for orphan peak is not set, set it to the median gene size:
             if do_orphan_merge:
                 if not orphan_maximum_size:
-                    orphan_maximum_size = helper.get_median_gene_length(inputfile=genefile,fmt = 'gff')
+                    orphan_maximum_size = helper.get_quantile_gene_length(inputfile=genefile,fmt = infmt,q = maxsize_quant)
+                    print('Maximum size of orphan clusters is set to 95-th quantile of the gene lengths: %s' % orphan_maximum_size)
 
         #-1. Index input bam 
         if bamfile:
@@ -746,7 +750,15 @@ if __name__ == "__main__":
             run_estimate(tempdir = tempdir,bamfile = bamfile,genefile = genefile,outputfile = outputfile,infmt = infmt,threads = threads, verbose=verbose,orphanbed = None,onlyestimate = True)
         console.print(Panel.fit(Text("All done!", style="bold blue"), border_style="bold blue"))
 
-        report_extensions(file_path = tempdir+'/extensions.tsv',n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
+        # Report extensions
+        if do_orphan:
+            if do_orphan_merge:
+                orphan_bed = tempdir + '/orphan_merged.bed'
+            else:
+                orphan_bed = tempdir + '/orphan.bed'
+        else:
+            orphan_bed = None
+        report_extensions(file_path = tempdir+'/extensions.tsv',orphan_bed = orphan_bed,n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
 
         if do_estimate:
             report_estimate()

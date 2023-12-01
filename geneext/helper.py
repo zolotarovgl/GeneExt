@@ -1094,7 +1094,7 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,genic_bed =
 
 
 # get median length of the gene:
-def get_median_gene_length(inputfile = None,fmt = None):
+def get_quantile_gene_length(inputfile = None,fmt = None,q = 0.5):
     if fmt == 'gtf':
         regs = parse_gtf(inputfile,featuretype = 'gene')
     elif fmt == 'gff':
@@ -1103,7 +1103,7 @@ def get_median_gene_length(inputfile = None,fmt = None):
         regs = parse_bed(inputfile)
     else:
         print("Unknown input format!")
-    med = np.median([x.end - x.start for x in regs])
+    med = np.quantile([x.end - x.start for x in regs],q = q)
     return(med)
 
 def get_number_of_genes(inputfile = None,fmt = None):
