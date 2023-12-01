@@ -7,7 +7,7 @@ import pysam
 import multiprocessing
 from functools import partial
 import time
-
+import pandas as pd
 
 # visual
 
@@ -1123,6 +1123,43 @@ def append_before_ext(filename, suffix):
     if not name.endswith(f".{suffix}"):
         return f"{name}.{suffix}{ext}"
     return filename
+
+def get_intronic_bed(genefile = None, tempdir = None, verbose = 0):
+    cmd = "awk '$3==@exon@' %s | bedtools sort -i - | bedtools merge -i - > %s/reg.exonic.bed" % (genefile,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    
+    cmd = "awk '$3==@gene@' %s | bedtools sort -i - | bedtools merge -i - > %s/reg.genic.bed" % (genefile,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    cmd = "awk '$3==@gene@ {print $1@\t@$5}' %s | sort -k1,1 -k2,2rn | awk '{if($1 in seen ==0){m[$1]=$2;seen[$1]=1}}END{for(k in m){print k@\t@m[k]}}' > %s/chr_sizes.tsv" % (genefile,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    cmd = "bedtools complement -i %s/reg.genic.bed -g %s/chr_sizes.tsv  > %s/reg.intergenic.bed" % (tempdir,tempdir,tempdir)
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    cmd = "bedtools complement -i %s/reg.exonic.bed -g %s/chr_sizes.tsv | bedtools intersect -a - -b %s/reg.intergenic.bed -v > %s/reg.intronic.bed" % (tempdir,tempdir,tempdir,tempdir)
+    cmd = cmd.replace('@','"')
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)    
+
+
+# get length quantile from bed:
+def get_bed_length_q(bedfile,q=0.5):
+    df = pd.read_csv(bedfile,sep = '\t')
+    return(np.quantile(df.iloc[:,2]-df.iloc[:,1],q))
+
 
 def subsample_bam(inputbam = None,outputbam = None,nreads = None,verbose = True,threads = '1'):
     #cmd = "samtools idxstats -@ %s %s | cut -f 3 |  awk -v ct=%s 'BEGIN{total=0}{total+=$1}END{print ct/total}' | sed 's/,/./g'" % (str(threads),str(inputbam),str(nreads))

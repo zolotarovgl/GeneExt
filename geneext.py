@@ -46,7 +46,7 @@ Orphan peaks are merged into orphan peak clusters by distance and then are kept 
 
 ''')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--orphan_maxdist', default = int(1000), help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [1000, bp]')
+parser.add_argument('--orphan_maxdist', default = None, help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [median intron length, bp]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Defalt: [95th quantile of gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
@@ -419,9 +419,12 @@ if __name__ == "__main__":
     do_orphan_merge =  do_orphan and not args.nocluster
 
     # Orphan merging defaults:
-    orphan_maximum_distance =int(args.orphan_maxdist)
+    #orphan_maximum_distance =int(args.orphan_maxdist)
+    orphan_maximum_distance= int(args.orphan_maxdist) if args.orphan_maxdist else None # DEV
+    maxdist_quant = 0.95
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
     maxsize_quant = 0.95
+    
     # Clipping 5'-overlaps 
     do_5clip = args.clip_5prime
     #do_5clip = True
@@ -608,7 +611,14 @@ if __name__ == "__main__":
             if do_orphan_merge:
                 if not orphan_maximum_size:
                     orphan_maximum_size = helper.get_quantile_gene_length(inputfile=genefile,fmt = infmt,q = maxsize_quant)
-                    print('Maximum size of orphan clusters is set to 95-th quantile of the gene lengths: %s' % orphan_maximum_size)
+                    if verbose:
+                        print('Maximum size of orphan clusters is set to %s-th quantile of the gene lengths: %s' % (round(maxsize_quant*100),round(orphan_maximum_size)))
+                if not orphan_maximum_distance:
+                    helper.get_intronic_bed(genefile = genefile, tempdir = tempdir, verbose = verbose)
+                    bedfile = tempdir + '/reg.intronic.bed'
+                    orphan_maximum_distance = helper.get_bed_length_q(bedfile,maxdist_quant)
+                    if verbose:
+                        print('Maximum distance between peaks is set to %s-th quantile of intron lengths: %s' % (round(maxdist_quant*100),round(orphan_maximum_distance)))
 
         #-1. Index input bam 
         if bamfile:
