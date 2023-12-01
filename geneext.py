@@ -207,7 +207,7 @@ def clean_tmp(tempdir = None):
     # clean temporary directory of big files 
     toremove = [tempdir+'/'+x for x in os.listdir(tempdir) if '.bam' in x or  x[0] == '_']
     for file in toremove:
-        if verbose > 0:
+        if verbose > 2:
             print("Removing %s" % file)
         os.remove(file)
 
@@ -606,7 +606,7 @@ if __name__ == "__main__":
             if not maxdist:
                 maxdist = helper.get_quantile_gene_length(inputfile = genefile,fmt = infmt,q = maxsize_quant)
                 if verbose:
-                    print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(maxdist))
+                    print('Maximum allowed extension length is not set, getting median size of the gene - %s bp.' % str(round(maxdist)))
             # if maximum size for orphan peak is not set, set it to the median gene size:
             if do_orphan_merge:
                 if not orphan_maximum_size:
