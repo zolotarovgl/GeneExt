@@ -1092,7 +1092,7 @@ def merge_orphan_distance(orphan_bed = None,orphan_merged_bed = None,genic_bed =
         #    print('Running:\n\t%s' % cmd)
         #ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-    cmd = """bedtools merge -i %s -s -d %s -c 4,5,6 -o distinct,max,distinct | awk 'BEGIN{OFS="\t";cnt=1}$3-$2<=%s {if($4~/,/){$4="peak.cl"cnt;cnt+=1};print $0}' > %s""" % (orphan_bed,maxdist,maxsize,orphan_merged_bed)
+    cmd = """bedtools merge -i %s -s -d %s -c 4,5,6 -o distinct,max,distinct | awk 'BEGIN{OFS="\t";cnt=1}$3-$2<=%s {if($4~/,/){$4="peak.cl"cnt;cnt+=1};print $0}' > %s""" % (orphan_bed,maxdist,round(maxsize),orphan_merged_bed)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
