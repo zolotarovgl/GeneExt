@@ -71,7 +71,7 @@ To capture cases like this, `GeneExt` provides an option to keep the peaks that 
 
 __Note:__ it may happen that you will get a lot of "orphan" peaks in your annotation file  (e.g. 100 000). Don't worry, having these peaks in your genome annotation will not affect the counting. After you obtain a count matrix, you can always filter these peaks in the downstream analyses.    
 
-### Merging orphan peaks   
+### Orphan peak merging      
 
 Missing genes may be represented by multiple orphan peaks corresponding to exonic regions. Having such peaks will lead to including highly correlated features which is undesirable for single-cell RNAseq analyses. 
 By default, `GeneExt` will try to merge such peaks by distance unless `--nomerge` is specified.  
@@ -99,11 +99,10 @@ Thus, instead of setting `-m` to unrealistically big values, we advice setting i
 
 ### --extension_mode Extension modes  
 
-Depending on the application (or rather your taste), you may want to add extensions differently.  
-Note: in general, it doesn't matter which type of extension you choose - it should not affect read counting.  
+t.b.a   
 
 
-### --peakp Filtering peaks based on coverage  
+### --peak_perc Filtering peaks based on coverage  
 
 To make `GeneExt` more conservative in peak calling, peaks are filtered based on the average coverage.   
 After calling the peaks, `GeneExt` will calculate per-base coverage distribution for __genic__ peaks (i.e. peaks overlapping genes). This distribution is then used to filter __intergenic peaks__. `--peakp` sets a quantile of that distribution above which intergenic peaks are retained.  
@@ -155,8 +154,7 @@ Note: currently, `transcript` features are not added automatically. Please, chec
 
 ## GeneExt does not accept my annotation file  
 
-see [Input troubleshooting](##Input-troubleshooting)
-
+See [Input troubleshooting](#input-troubleshooting)
 ## GeneExt takes a long time to run. How can I speed it up?  
 
 1. `.bam` subsampling:    

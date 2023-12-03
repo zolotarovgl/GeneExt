@@ -1136,7 +1136,7 @@ def get_intronic_bed(genefile = None, tempdir = None, verbose = 0):
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     
-    cmd = "awk '$3==@gene@' %s | bedtools sort -i - | bedtools merge -i - > %s/reg.genic.bed" % (genefile,tempdir)
+    cmd = "awk '$3==@gene@' %s | bedtools sort -i - | bedtools merge -i - | bedtools sort -i - > %s/reg.genic.bed" % (genefile,tempdir)
     cmd = cmd.replace('@','"')
     if verbose > 1 :
         print('Running:\n\t%s' % cmd)
@@ -1593,7 +1593,7 @@ def clip5_worker_process(genes, infile, i, results,logs,verbose,tag):
     logs[i] = log
 
 
-def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = '_5clip'):
+def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = 'GeneExt_5clip'):
     logfile = outfile + '5clip.log'
     import math
     # Load the database
