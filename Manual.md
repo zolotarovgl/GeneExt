@@ -43,6 +43,15 @@ After calling the peaks, `GeneExt` will calculate per-base coverage distribution
 
 Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.   
 
+## --clip_5prime Gene overlap clipping  
+
+`--clip_5prime` option enables `GeneExt` to resolve 5'-overlaps between genes. 
+Depending on the behavior of the UMI demultiplexing software used, gene overlaps can cause:
+1. the upstream gene to not be quantified (if 3′ biased scRNA-seq reads mapped into the overlapping region are discarded such as in cellranger)  
+2. the downstream gene to have two distinct confounding expression signals (if reads are assigned to both).  
+`GeneExt` will clip the downstream gene.  
+> [!Warning]
+> This clipping procedure is done without respecting protein-coding information containted in the downstream gene. Use with caution!   
 
 
 ## Input & Output   
@@ -60,7 +69,7 @@ Please, ensure your genome annotation file is properly formatted!
 
 ## How to get a .bam file?   
 
-If you already have used `cellranger`, then you can simply use its `.bam` file (`[cellranger_output_directory]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
+If you already have used `cellranger`, then you can simply use its `.bam` file (`possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
 > [!Warning]
 > For now, `GeneExt` only accepths a single alignment file, so if you have multiple sequencing datasets, you should concatenate your scRNA-seq fastq file for the following step: 
