@@ -2,7 +2,6 @@
 
 GeneExt takes as input scRNA-seq mapped reads and a gene annotation file (GTF or GFF, any version) and outputs an extended gene annotation file for improved scRNA-seq transcript quantification.
 
-=
 # Installation  
 
 Tool dependencies can be installed with `conda` or `mamba`: 
