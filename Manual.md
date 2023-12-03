@@ -62,7 +62,8 @@ Please, ensure your genome annotation file is properly formatted!
 
 If you already have used `cellranger`, then you can simply use its `.bam` file (`[cellranger_output_directory]/outs/possorted_genome.bam`). Alternatively, you may generate an alignment yourself with any splice-aware aligner. 
 
-Note: for now, `GeneExt` only accepths a single alignment file, so if you have multiple sequencing datasets, you should concatenate your scRNA-seq fastq file for the following step:  
+> [!Warning]
+> For now, `GeneExt` only accepths a single alignment file, so if you have multiple sequencing datasets, you should concatenate your scRNA-seq fastq file for the following step: 
 
 ```cat lane1.R2.fastq.gz lane2.R2.fastq.gz > data/cells.R2.fastq.gz```
 
