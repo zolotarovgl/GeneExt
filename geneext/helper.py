@@ -1353,6 +1353,7 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 
 def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False):
     db = gffutils_import_gxf(infile)
+
     # Create a dictionary to store the longest transcript for each gene
     g2tid = {}
     g2t = {}
@@ -1374,6 +1375,51 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
     if verbose:
         print('%s genes - %s transcripts' % (cnt,len(g2t)))
     
+    
+    
+    ############### Fix missing exons ############################################### 
+    def missing_exons(db):
+        # the function should infer if the transcripts are missing associated exons. 
+        # this happens when the transcript and the gene have the same IDs. 
+        exons = []
+        for transcript in db.features_of_type("transcript"):
+            for child in db.children(transcript.id):
+                exons.append(child.id)
+        return(len(exons) == 0)
+    if missing_exons(db):
+        print('Exons are missing from the file. This usually happens when transcripts and genes have the same ID. Trying to fix ...')
+        if infmt == 'gtf':
+            # create a dictionary of t2exon features which will be used later to write the features down. 
+            #raise(NotImplementedError("Don't know how to change transcript IDs for gtf - contact the support."))
+            t2exon = {}
+
+            for gene_id in g2tid.keys():
+                n_transcripts = len(g2tid[gene_id])
+                if n_transcripts != 0:
+                    transcript_id = g2tid[gene_id]
+                    # gffutils will make the ID unique
+                    exons = [x for x in db.children(gene_id) if x.featuretype == 'exon' and x['transcript_id'][0] == gene_id]
+                    # aha, transcript
+                    exons_updated = []
+                    for exon in exons:
+                        exon['transcript_id'] = transcript_id
+                        exons_updated.append(exon)
+                    t2exon.update({transcript_id:exons_updated})
+                else:
+                    raise(NotImplementedError('no transcripts found for a gene %s!' % gene_id))
+        else:
+            raise(NotImplementedError("Don't know how to change transcript IDs for gff - contact the support."))
+    else:
+        t2exon = {}
+        for gene_id in g2tid.keys():
+            n_transcripts = len(g2tid[gene_id])
+            if n_transcripts == 0:
+                transcript_id = g2tid[gene_id]
+                t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})
+            else:
+                for transcript_id in g2tid[gene_id]:
+                    t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})        
+
 
     with open(outfile,'w') as ofile:
             for i,gene in enumerate(db.features_of_type("gene")):
@@ -1384,7 +1430,7 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
                         transcript = g2t[gene.id]
                         transcript_id = transcript.id
                         ofile.write(str(transcript) + '\n')
-                        for child in db.children(transcript_id):
+                        for child in t2exon[transcript_id]:
                             ofile.write(str(child)+ '\n')
 
                     if outfmt == 'gff':
@@ -1397,6 +1443,29 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
                         ofile.write(str(transcript) + '\n')
                         for child in db.children(transcript_id):
                             ofile.write(str(child)+ '\n')
+
+#    with open(outfile,'w') as ofile:
+#            for i,gene in enumerate(db.features_of_type("gene")):
+#                if gene.id in g2tid:
+#                    # check if there is a gene_id 
+#                    if outfmt == 'gtf':
+#                        ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+#                        transcript = g2t[gene.id]
+#                        transcript_id = transcript.id
+#                        ofile.write(str(transcript) + '\n')
+#                        for child in db.children(transcript_id):
+#                            ofile.write(str(child)+ '\n')
+#
+#                    if outfmt == 'gff':
+#                        ofile.write(str_gff(gene,attributes = ['ID']) + ';\n')
+#                        # write the gene:
+#                        #o = "\t".join([gene.chrom,gene.source,str(gene.start),str(gene.end),'.',gene.strand,'.','gene_id "' + gene.id + '"'])
+#                        #ofile.write(o + '\n')         
+#                        transcript = g2t[gene.id]
+#                        transcript_id = transcript.id
+#                        ofile.write(str(transcript) + '\n')
+#                        for child in db.children(transcript_id):
+#                            ofile.write(str(child)+ '\n')
 
 
 

@@ -508,7 +508,7 @@ if __name__ == "__main__":
         if bamfile is not None:
             if os.path.isfile(bamfile):
                 if verbose > 0:
-                    print('Alighment file ... OK')
+                    print('Alignment file ... OK')
             else:
                 pipeline_error_print('Specified alignment file does not exist!')
 
@@ -572,6 +572,7 @@ if __name__ == "__main__":
             genefile = fixed_file_name
         else:
             genefile = run_genefile_fix(genefile,infmt)
+
         if do_longest:
             #new_genefile = helper.append_before_ext(genefile,'fixed')
             new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
@@ -595,7 +596,6 @@ if __name__ == "__main__":
             if verbose > 2:
                 print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
             genefile = new_genefile
-    #console.print('done',style = 'bold green')
 
     console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
     ##################################################
