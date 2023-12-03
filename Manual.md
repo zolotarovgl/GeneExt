@@ -1,11 +1,10 @@
+!['header'](./img/logo.png)  
 # Manual  
-
-## Motivation   
 
 Genomes often have incomplete annotations of their 3-prime untranslated regions (3'-UTRs). At the same time, some of the most popular single-cell RNA sequencing methods are biased towards 3' ends of mRNA molecules. In result, this creates a bias in gene counting for genes with missing fragments of 3'-UTRs:   
 ![Gene_counting](./img/gene_counting_problem.png)
 
-`GeneExt` aims to enhance gene models in the reference genome by leveraging the scRNA-seq data itself (or similar 3'-biased transcriptomics data). `GeneExt` not only improves UMI count accuracy per gene but also resolves gene overlap issues.
+`GeneExt` aims to refine gene models in the reference genome by leveraging the scRNA-seq data itself (or similar 3'-biased transcriptomics data). `GeneExt` not only improves UMI count accuracy per gene but also resolves gene overlap issues.
 
 ## How it works  
 
@@ -14,6 +13,36 @@ Genomes often have incomplete annotations of their 3-prime untranslated regions 
 1. `GeneExt` accepts alignment files from any 3'-end biased single-cell (or bulk RNA-seq) protocol. It will then call peaks from this data using `macs2` software. 
 2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an `-m` parameter (see below).  
 3. After genes are extended, `GeneExt` will write an output file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
+4. If the `--orphan` option is used, `GeneExt` will use the intergenic peaks not previously assigned to an upstream gene (only those surviving the coverage filter step) to add putative new genes to the final annotation.
+
+## The most important parameters   
+
+## Important parameters   
+
+### --m Maximal extension length   
+
+`-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
+However, the genome annotation is guaranteed to be __missing some genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
+
+![Gene misassignment](./img/gene_misassignment.png)
+
+Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis [Orphan peaks](#orphan-peaks)).
+
+
+### --orphan Extension modes  
+
+Use this option to keep [Orphan peaks](#orphan-peaks).
+
+
+### --peak_perc Filtering peaks based on coverage  
+
+To make `GeneExt` more conservative in peak calling, peaks are filtered based on the average coverage.   
+After calling the peaks, `GeneExt` will calculate per-base coverage distribution for __genic__ peaks (i.e. peaks overlapping genes). This distribution is then used to filter __intergenic peaks__. `--peakp` sets a quantile of that distribution above which intergenic peaks are retained.  
+
+![Peak filtering](./img/peak_filtering.png)   
+
+Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.   
+
 
 
 ## Input & Output   
@@ -76,40 +105,13 @@ __Note:__ it may happen that you will get a lot of "orphan" peaks in your annota
 Missing genes may be represented by multiple orphan peaks corresponding to exonic regions. Having such peaks will lead to including highly correlated features which is undesirable for single-cell RNAseq analyses. 
 By default, `GeneExt` will try to merge such peaks by distance unless `--nomerge` is specified.  
 
-![Orphan_merging](./img/orphan_merging.png)
+![Orphan_merging](./img/peak_clustering.png)
 
 Default settings are the following:  
-* Maximum distance between the peaks (`--orphan_maxdist`) - 10000  
-* Maximum size of the orphan peak cluster (`--orphan_maxsize`) - median gene length (genomic span)  
+* Maximum distance between the peaks (`--orphan_maxdist`) - median size of an intron.  
+* Maximum size of the orphan peak cluster (`--orphan_maxsize`) - median gene length.  
 
 So far, the merged peaks are represented by a single continuos region.  
-
-## Important parameters   
-
-### --m Maximal extension length   
-
-`-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
-However, the genome annotation is guaranteed to be __missing some genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
-
-![Gene misassignment](./img/gene_misassignment.png)
-
-Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis [Orphan peaks](#orphan-peaks)).
-
-
-
-### --extension_mode Extension modes  
-
-t.b.a   
-
-
-### --peak_perc Filtering peaks based on coverage  
-
-To make `GeneExt` more conservative in peak calling, peaks are filtered based on the average coverage.   
-After calling the peaks, `GeneExt` will calculate per-base coverage distribution for __genic__ peaks (i.e. peaks overlapping genes). This distribution is then used to filter __intergenic peaks__. `--peakp` sets a quantile of that distribution above which intergenic peaks are retained.  
-
-![Peak filtering](./img/peak_filtering.png)   
-
-Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.   
 
 ## Input troubleshooting  
 
