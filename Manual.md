@@ -172,7 +172,9 @@ See [Input troubleshooting](#input-troubleshooting)
 ## I get too many peaks. How should I filter them?   
 The results of peak calling depend on the  dataset quality. By default, `GeneExt` filters the peaks based on the coverage __before__ gene extension.  
 However, as is stated above, having many "orphan" peaks in your annotation __will not affect gene counting__ but may help preserving valuable information about cell type heterogeneity in the data.    
-
+If you wish to remove more peaks, you may increase the `--orphan_maxdist` parameter. This will lead to more orphan peaks clustered to end up in the clusters of bigger size that will be removed (`--orphan_maxsize`).
 
 ## Some orphan peaks look like missing genes - how can I link them? 
-For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1'). If you observe a lot of such cases, you can try increasing parameters for orphan peak clustering and merging (`--orphan_maxdist`,`--orphan_size`).   
+For the specified peaks you want to merge, you can manually change the `gene.id` attribute in every peak to a common value (e.g. an 'unknown_gene_1'). If you observe a lot of such cases, you can try increasing parameters for orphan peak clustering and merging (`--orphan_maxdist`,`--orphan_maxsize`) so that these orphan peaks will end up called as clusters.   
+
+
