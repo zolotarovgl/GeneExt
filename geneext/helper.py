@@ -1159,6 +1159,10 @@ def get_intronic_bed(genefile = None, tempdir = None, verbose = 0):
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)    
 
+# get the number of files in bed:
+def get_tsv_nrow(bedfile):
+    df = pd.read_csv(bedfile,sep = '\t')
+    return(df.shape[0])
 
 # get length quantile from bed:
 def get_bed_length_q(bedfile,q=0.5):
@@ -1313,10 +1317,11 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                         print(transcript.id)
                     ofile.write(str(transcript) + '\n')
                     for child in db.children(db[transcript.id]): 
-                        if ';' in child['gene_id'][0]:
-                            child['gene_id'][0] = child['gene_id'][0].replace(';','')
-                        if child.featuretype in ['exon']: # to account for the cases when the transcripts is a child of itself
-                            ofile.write(str(child) + '\n')
+                        if 'gene_id' in child.attributes: #spis
+                            if ';' in child['gene_id'][0]:
+                                child['gene_id'][0] = child['gene_id'][0].replace(';','')
+                            if child.featuretype in ['exon']: # to account for the cases when the transcripts is a child of itself
+                                ofile.write(str(child) + '\n')
 
             if infmt == 'gff':
                 """Just copy as parent"""
