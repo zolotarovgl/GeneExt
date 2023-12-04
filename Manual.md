@@ -46,7 +46,7 @@ Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.
 `--clip_5prime` option enables `GeneExt` to resolve 5'-overlaps between genes.   
 Depending on the behavior of the UMI demultiplexing software used, gene overlaps can cause:
 1. the upstream gene to not be quantified (if 3′ biased scRNA-seq reads mapped into the overlapping region are discarded such as in cellranger)  
-2. the downstream gene to have two distinct confounding expression signals (if reads are assigned to both).  
+2. the downstream gene to have two distinct confounding expression signals (if reads are assigned to both).     
 `GeneExt` will clip the downstream gene giving the preference to an upstream one:  
 
 ![Peak filtering](./img/5clip.png)   
