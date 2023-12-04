@@ -1317,7 +1317,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                         print(transcript.id)
                     ofile.write(str(transcript) + '\n')
                     for child in db.children(db[transcript.id]): 
-                        if 'gene_id' in child.attributes: #spis
+                        if 'gene_id' in child.attributes: # for the case of children with no gene_id field - it's hopeless 
                             if ';' in child['gene_id'][0]:
                                 child['gene_id'][0] = child['gene_id'][0].replace(';','')
                             if child.featuretype in ['exon']: # to account for the cases when the transcripts is a child of itself
