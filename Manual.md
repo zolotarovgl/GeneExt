@@ -105,9 +105,7 @@ Sometimes, the dataset may be too large for `GeneExt` to run in meaninful time, 
 
 ### Definition  
 
-The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__: 
-
-![Missing_gene](./img/missing_gene.png)
+The majority peaks not be assigned to any gene due to the distance (`-m` parameter). However, some of these peaks will correspond to really long 3'-UTRs or __unannotated genes__. 
 
 To capture cases like this, `GeneExt` provides an option to keep the peaks that pass coverage filtering but haven't been assigned to any gene (e.g. they are located too far from any genic region) with an `--orphan` option.  
 
