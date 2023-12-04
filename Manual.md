@@ -22,7 +22,7 @@ Genomes often have incomplete annotations of their 3-prime untranslated regions 
 `-m` parameter specifies the maximum distance the gene is allowed to be extended for. Setting `-m` to larger values will almost always result in longer extensions of genes and thus more reads counted per gene.  
 However, the genome annotation is guaranteed to be __missing some genes__. In such cases, you may actually __misassign the reads to the gene they don't belong to__.
 
-![Gene misassignment](./img/gene_misassignment.png)
+!['Gene extension']](./img/max_ext.png)
 
 Thus, instead of setting `-m` to unrealistically big values, we advice setting it to something biologically meaningful (e.g 1x-2x of median length of a gene) and to use it along with calling "orphan peaks" ( `--orphan` option, vis [Orphan peaks](#orphan-peaks)).
 
