@@ -153,7 +153,7 @@ The most common problems with gtf/gff files:
 3. "gene" and "transcript" features have the same IDs - `GeneExt` may have troubles when parsing the file.  
 
 > [!Warning]
-> Please, make sure your GTF file at least has "transcript" and "exon" features. Transcripts should have the same IDs as genes even if there is a single transcript per gene!  
+> Please, make sure your GTF file at least has "transcript" and "exon" features. Transcripts should __NOT__ have the same IDs as genes even if there is a single transcript per gene!  
 
 
 # FAQs  
