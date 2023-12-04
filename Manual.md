@@ -119,10 +119,10 @@ By default, `GeneExt` will try to merge such peaks by distance unless `--nomerge
 ![Orphan_merging](./img/peak_clustering.png)
 
 Default settings are the following:  
-* Maximum distance between the peaks (`--orphan_maxdist`) - median size of an intron.  
+* Maximum distance between the peaks (`--orphan_maxdist`) - 75-th percentile of intron sizes.  
 * Maximum size of the orphan peak cluster (`--orphan_maxsize`) - median gene length.  
 
-So far, the merged peaks are represented by a single continuos region.  
+The merged peaks are represented by a single continuos region.  
 
 ## Input troubleshooting  
 
@@ -147,21 +147,14 @@ chr1  source  exon  1 40  . + . gene_id "gene1"; transcript_id "transcript1"
 chr1  source  exon  70 100  . + . gene_id "gene1"; transcript_id "transcript1"   
 ```
 
-__TODO__
-It is also possible to output a "mock" cellranger gtf file (`crgtf`) with only gene ranges labeled as exons. This file can also be accepted by `cellranger`.  
+The most common problems with gtf/gff files:   
+1. Missing "gene" features - `GeneExt` will try to infer missing "gene" features.
+2. Missing "transcript" features - `GeneExt` can't infer transcripts at the moment. Please, check if your annotation file at least contains exons and transcripts.    
+3. "gene" and "transcript" features have the same IDs - `GeneExt` may have troubles when parsing the file.  
 
-Notes:  
-1. In `crgtf` file, every gene will be present as a single feature of a type "exon". This format disregards exon/intron structure of the genes which makes it unsuitable for downstream analyses which depend on this structure (e.g. RNA-velocity). 
-2. If genes are provided in a `bed` file, then the output will always be the `crgtf` file.  
-3. If you are really desperate, try converting your `.gff/.gtf` file into a `.bed` file with only genomic ranges. `GeneExt` will try to output `crgtf` file:
-  ```
-  chr1  1 100 gene1 0 +
-  ```
+> [!Warning]
+> Please, make sure your GTF file at least has "transcript" and "exon" features. Transcripts should have the same IDs as genes even if there is a single transcript per gene!  
 
-## Adding missing "gene" features  
-
-Quite often `.gtf/.gff` file will miss "gene" features. In such cases, `GeneExt` will try to fix the annotation by inferring genes.  
-Note: currently, `transcript` features are not added automatically. Please, check if your annotation file at least contains exons and transcripts. 
 
 # FAQs  
 
