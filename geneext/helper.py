@@ -456,10 +456,10 @@ class Region:
 
 
 # GXF helper 
-def gffutils_import_gxf(filepath,verbose = False):
+def gffutils_import_gxf(filepath,merge_strategy = 'create_unique',verbose = False):
     if verbose > 0:
         print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
-    db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = 'create_unique',transform = gffutils_transform_func,keep_order = True)
+    db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = merge_strategy,transform = gffutils_transform_func,keep_order = True)
     if verbose > 1:
         print('======== Features loaded: ======================')
         for a,b in zip(db.featuretypes(),[db.count_features_of_type(x) for x in db.featuretypes()]):
@@ -1283,7 +1283,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
     # create a transcript2gene and gene2transcript dicts:
     t2g = {}
     for feature in db.features_of_type('transcript'):
-        # CAVE: this is where parsing may fail
+        # CAVE: this is where the parsing may fail
         if infmt == 'gtf':
             geneid = feature['gene_id'][0]
         elif infmt == 'gff':
@@ -1310,10 +1310,14 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                     print('%s transcripts found.' % len(transcripts))
                 for transcript in transcripts:
                     if verbose > 2:
-                        print(transcript.id)   
+                        print(transcript.id)
                     ofile.write(str(transcript) + '\n')
-                    for child in db.children(db[transcript.id]):
-                        ofile.write(str(child) + '\n')
+                    for child in db.children(db[transcript.id]): 
+                        if ';' in child['gene_id'][0]:
+                            child['gene_id'][0] = child['gene_id'][0].replace(';','')
+                        if child.featuretype in ['exon']: # to account for the cases when the transcripts is a child of itself
+                            ofile.write(str(child) + '\n')
+
             if infmt == 'gff':
                 """Just copy as parent"""
                 if 'Parent' in feature.attributes:
@@ -1352,13 +1356,13 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 ######################### Longest transcript per gene ########################
 
 def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False):
-    db = gffutils_import_gxf(infile)
-
+    db = gffutils_import_gxf(infile,merge_strategy="merge",verbose = 0) # 4.12.2023: try merging genes with identical IDs
     # Create a dictionary to store the longest transcript for each gene
     g2tid = {}
     g2t = {}
     # Iterate over all genes in the database
     cnt = 1
+    not_cnt = 0
     for gene in db.features_of_type('gene'):
         if not gene.id and infmt == 'gtf': 
             gene.id = gene[['gene_id']]
@@ -1369,11 +1373,13 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
             g2tid[gene.id] = max(lengths, key=lengths.get)
             g2t[gene.id] = t2model[max(lengths, key=lengths.get)]
         else:
-            if(verbose > 1):
+            if(verbose > 2):
                 print('select_longest_transcript: no transcripts found for gene %s!' % gene.id)
+            not_cnt += 1
         cnt += 1 
     if verbose:
         print('%s genes - %s transcripts' % (cnt,len(g2t)))
+        print('%s genes with no transcripts!' % not_cnt)
     
     
     
@@ -1386,6 +1392,8 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
             for child in db.children(transcript.id):
                 exons.append(child.id)
         return(len(exons) == 0)
+
+
     if missing_exons(db):
         print('Exons are missing from the file. This usually happens when transcripts and genes have the same ID. Trying to fix ...')
         if infmt == 'gtf':
@@ -1412,14 +1420,14 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
     else:
         t2exon = {}
         for gene_id in g2tid.keys():
-            n_transcripts = len(g2tid[gene_id])
-            if n_transcripts == 0:
+            if isinstance(g2tid[gene_id], str):
                 transcript_id = g2tid[gene_id]
-                t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})
+                #t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})
+                t2exon[transcript_id] = [x for x in db.children(transcript_id)]
             else:
                 for transcript_id in g2tid[gene_id]:
-                    t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})        
-
+                    #t2exon.update({transcript_id: [x for x in db.children(transcript_id)]})     
+                    t2exon[transcript_id] = [x for x in db.children(transcript_id)]   
 
     with open(outfile,'w') as ofile:
             for i,gene in enumerate(db.features_of_type("gene")):
@@ -1431,7 +1439,8 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
                         transcript_id = transcript.id
                         ofile.write(str(transcript) + '\n')
                         for child in t2exon[transcript_id]:
-                            ofile.write(str(child)+ '\n')
+                            if child.featuretype in ['exon','CDS']:
+                                ofile.write(str(child)+ '\n')
 
                     if outfmt == 'gff':
                         ofile.write(str_gff(gene,attributes = ['ID']) + ';\n')

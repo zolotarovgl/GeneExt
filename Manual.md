@@ -13,9 +13,7 @@ Genomes often have incomplete annotations of their 3-prime untranslated regions 
 1. `GeneExt` accepts alignment files from any 3'-end biased single-cell (or bulk RNA-seq) protocol. It will then call peaks from this data using `macs2` software. 
 2. For every gene, the most downstream peak will be chosen as a new mRNA cleavage site. The maximal distance from a gene to a peak is controlled by an `-m` parameter (see below).  
 3. After genes are extended, `GeneExt` will write an output file which can be used to build a genome reference (e.g. with `cellranger mkref`).  
-4. If the `--orphan` option is used, `GeneExt` will use the intergenic peaks not previously assigned to an upstream gene (only those surviving the coverage filter step) to add putative new genes to the final annotation.
-
-## The most important parameters   
+4. If the `--orphan` option is used, `GeneExt` will use the intergenic peaks not previously assigned to an upstream gene (only those surviving the coverage filter step) to add putative new genes to the final annotation. 
 
 ## Important parameters   
 
@@ -45,11 +43,14 @@ Thus, decreasing `--peakp` will result in more peaks called and _vice versa_.
 
 ## --clip_5prime Gene overlap clipping  
 
-`--clip_5prime` option enables `GeneExt` to resolve 5'-overlaps between genes. 
+`--clip_5prime` option enables `GeneExt` to resolve 5'-overlaps between genes:  
+
+![Peak filtering](./img/5clip.png)   
+
 Depending on the behavior of the UMI demultiplexing software used, gene overlaps can cause:
 1. the upstream gene to not be quantified (if 3′ biased scRNA-seq reads mapped into the overlapping region are discarded such as in cellranger)  
 2. the downstream gene to have two distinct confounding expression signals (if reads are assigned to both).  
-`GeneExt` will clip the downstream gene.  
+`GeneExt` will clip the downstream gene  
 > [!Warning]
 > This clipping procedure is done without respecting protein-coding information containted in the downstream gene. Use with caution!   
 

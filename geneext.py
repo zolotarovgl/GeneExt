@@ -46,7 +46,7 @@ Orphan peaks are merged into orphan peak clusters by distance and then are kept 
 
 ''')
 parser.add_argument('--orphan',action='store_true', help = 'Whether to add orphan peaks')
-parser.add_argument('--orphan_maxdist', default = None, help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [median intron length, bp]')
+parser.add_argument('--orphan_maxdist', default = None, help = 'Orphan peak merging: Maximum distance between orphan peaks to merge. [95-th percentile of intron length, bp]')
 parser.add_argument('--orphan_maxsize', default = None, help = 'Orphan peak merging: Maximum size of an orphan peak cluster. Default: [median gene length, bp]')
 #parser.add_argument('--mean_coverage', action='store_true', help = 'Whether to use mean coverage for peak filtering.\nMean coverage = [ # mapping reads]/[peak width].')
 parser.add_argument('--peak_perc',default = 25, help = 'Coverage threshold (percentile of macs2 genic peaks coverage). [1-99, 25 by default].\nAll peaks called with macs2 are required to have a coverage AT LEAST as N-th percentile of the peaks falling within genic regions.\nThis parameter allows to filter out the peaks based on the coverage BEFORE gene extension.')
@@ -421,7 +421,7 @@ if __name__ == "__main__":
     # Orphan merging defaults:
     #orphan_maximum_distance =int(args.orphan_maxdist)
     orphan_maximum_distance= int(args.orphan_maxdist) if args.orphan_maxdist else None # DEV
-    maxdist_quant = 0.5
+    maxdist_quant = 0.95
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
     maxsize_quant = 0.5
     
@@ -572,7 +572,7 @@ if __name__ == "__main__":
             genefile = fixed_file_name
         else:
             genefile = run_genefile_fix(genefile,infmt)
-
+        
         if do_longest:
             #new_genefile = helper.append_before_ext(genefile,'fixed')
             new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
