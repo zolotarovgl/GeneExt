@@ -21,5 +21,5 @@ python geneext.py -g test_data/annotation.gtf -b test_data/alignments.bam -o res
 ```
 Please, first test whether the tool works properly on the test data! 
 
-For details on how to obtain alignment file, please refer to the manual [manual](Manual.md).   
+For details on how to obtain alignment file, please refer to the [manual](Manual.md).   
 If problems persist, don't hesitate to contact the authors.
