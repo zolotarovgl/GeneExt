@@ -1277,6 +1277,7 @@ def get_featuretypes(infile = None):
         return(set(line.split('\t')[2] for line in file if not '#' in line))
 
 def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False):
+    # TODO: for multi-transcript files, the gene should be written only once!
     """Add gene features based on transcripts"""
     # record the maximal span per gene 
     if verbose > 1:
@@ -1296,6 +1297,7 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
     g2t = {}
     for t,g in t2g.items():
         g2t.update({g:[t for t,v in t2g.items() if v == g]})
+    genes_written = []
     with open(outfile,'w') as ofile:
         for i,feature in enumerate(db.features_of_type("transcript")):
             if verbose > 1 and i % 1000 == 0:
@@ -1307,7 +1309,9 @@ def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False
                 gene = feature
                 gene.featuretype = 'gene'
                 geneid = t2g[gene.id]
-                ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+                if not geneid in genes_written:
+                    ofile.write(str_gtf(gene,attributes = ['gene_id']) + '\n') 
+                    genes_written.append(geneid)
                 #transcripts = [feature for feature in db.features_of_type('transcript') if geneid in feature['gene_id']]
                 transcripts = [db[id] for id in g2t[geneid]]
                 if verbose > 2:
