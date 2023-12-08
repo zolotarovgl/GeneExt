@@ -3,7 +3,7 @@
 GeneExt takes as input scRNA-seq mapped reads and a gene annotation file (GTF or GFF, any version) and outputs an extended gene annotation file for improved scRNA-seq transcript quantification.
 
 # Installation  
-> **Note:** Users lacking a Conda installation are recommend to install [Miniforge](https://github.com/conda-forge/miniforge#miniforge).
+> **Note:** Users lacking a Conda installation are recommended to install [Miniforge](https://github.com/conda-forge/miniforge#miniforge).
 
 Tool dependencies can be installed with `conda` or `mamba`:
 
