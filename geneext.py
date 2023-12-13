@@ -162,7 +162,8 @@ def run_orphan():
         if verbose:
             print('Orphan peaks: merging by distance.')
         orphan_merged_bed  = tempdir + '/' + 'orphan_merged.bed'
-        helper.merge_orphan_distance(orphan_bed = orphan_bed,orphan_merged_bed = orphan_merged_bed,genic_bed = genefile_ext_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
+        chrnamesfile = tempdir + '/chr_names.txt'
+        helper.merge_orphan_distance(orphan_bed = orphan_bed,chr_names = chrnamesfile,orphan_merged_bed = orphan_merged_bed,genic_bed = genefile_ext_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
         if verbose:
             print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
         helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_merged_bed,fmt = outfmt,verbose=verbose,tag = tag) 
@@ -219,7 +220,7 @@ def estimate_mapping(tempdir = None,bamfile = None,genefile = None,infmt = None,
         chrsizesfile = tempdir + '/chr_sizes.tab'
 
         # prepare the files
-        helper.get_chrsizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
+        helper.get_chr_sizes(tempdir = tempdir, bamfile = bamfile, outfile = chrsizesfile, verbose = verbose)
         helper.get_genic_beds(genomeanno=genefile,genomechr=chrsizesfile,verbose = verbose,infmt = infmt,genicbed=genicbed,intergenicbed=intergenicbed)
 
         Ntot = helper.count_reads(bamfile=bamfile,bed = None,flags = '',threads=threads,verbose = verbose)
@@ -596,6 +597,9 @@ if __name__ == "__main__":
                 print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
             genefile = new_genefile
 
+        # Re-order genefile by the order of chromosomes 
+        helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose)
+
     # SJ DEV: what would be an appropriate place to put this function 
     ##################################################
     # Input:
@@ -622,6 +626,13 @@ if __name__ == "__main__":
     if not do_fix_only:
         # parse input file format: 
         if not do_estimate_only:    
+            #-1. Index input bam 
+            if bamfile:
+                if not os.path.isfile(bamfile + '.bai'):
+                    if verbose > 0:
+                        print('Indexing %s' % bamfile)
+                    helper.index_bam(bamfile,verbose = verbose,threads=threads)
+
             # if -m is not set, get a median gene size:
             if not maxdist:
                 maxdist = helper.get_quantile_gene_length(inputfile = genefile,fmt = infmt,q = 0.5)
@@ -634,18 +645,12 @@ if __name__ == "__main__":
                     if verbose:
                         print('Maximum size of orphan clusters is set to %s-th quantile of the gene lengths: %s' % (round(maxsize_quant*100),round(orphan_maximum_size)))
                 if not orphan_maximum_distance:
-                    helper.get_intronic_bed(genefile = genefile, tempdir = tempdir, verbose = verbose)
+                    helper.get_intronic_bed(genefile = genefile,bamfile = bamfile, tempdir = tempdir, verbose = verbose)
                     bedfile = tempdir + '/reg.intronic.bed'
                     orphan_maximum_distance = round(helper.get_bed_length_q(bedfile,maxdist_quant))
                     if verbose:
                         print('Maximum distance between peaks is set to %s-th quantile of intron lengths: %s' % (round(maxdist_quant*100),round(orphan_maximum_distance)))
 
-        #-1. Index input bam 
-        if bamfile:
-            if not os.path.isfile(bamfile + '.bai'):
-                if verbose > 0:
-                    print('Indexing %s' % bamfile)
-                helper.index_bam(bamfile,verbose = verbose,threads=threads)
 
         # 0. MAPPING - not implemented     
             if do_mapping:
@@ -688,6 +693,11 @@ if __name__ == "__main__":
                     helper.run_macs2(tempdir+'/' + 'plus.bam','plus',tempdir,verbose = verbose)
                     helper.run_macs2(tempdir+'/' + 'minus.bam','minus',tempdir,verbose = verbose)
                     helper.collect_macs_beds(outdir = tempdir,outfile = peaksfile,verbose = verbose)
+                    # reorder by the genome file 
+                    chrnamesfile = tempdir + '/chr_names.txt'
+                    #peaskfile_ordered = peaksfile.replace('.bed','.ordered.bed')
+                    helper.get_chr_names(bamfile, chrnamesfile,verbose = verbose)
+                    helper.order_bed(peaksfile,peaksfile,chrnamesfile,verbose = verbose)
                     console.print('done',style = 'bold green')
             else:
                 print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
