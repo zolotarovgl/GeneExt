@@ -414,7 +414,7 @@ if __name__ == "__main__":
     do_report = False # DEV
 
     #do_fix_only = args.onlyfix
-    do_fix_only = False # DEV
+    do_fix_only = True # DEV
 
     do_orphan = args.orphan
     do_orphan_merge =  do_orphan and not args.nocluster
@@ -446,7 +446,6 @@ if __name__ == "__main__":
     write_original_transcript = False # whether to write down the original transcript features
 #################################################################
 
-
     scriptloc = os.path.dirname(os.path.realpath(__file__))
     callcmd = 'python ' + os.path.basename(__file__) + ' '+ " ".join(["-"+str(k)+' '+str(v) for k,v in zip([arg for arg in vars(args)],[getattr(args,arg) for arg in vars(args)]) if v ])
     if verbose:
@@ -456,8 +455,7 @@ if __name__ == "__main__":
 
     # If fix_only set - report only doing genome annotation fixes:
     if do_fix_only:
-        print('================================================')
-        print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.g))
+        print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.genome))
 
     console.print(Panel.fit("[bold blue]Preflight checks[/bold blue]", border_style="bold blue"), end = end)
 
@@ -578,10 +576,10 @@ if __name__ == "__main__":
             new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
             if verbose:
                 print('Selecting the longest transcript per gene ...',end = " ")
-
-            helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose)
+            removed_genes_log = tempdir + '/' + 'removed_genes.txt'
+            helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose,removed_log = removed_genes_log)
             if verbose:
-                print('Done selecting the longest transcript per gene.')
+                print('Done selecting the longest transcript per gene.\nRemoved genes written to: %s' % removed_genes_log)
             genefile = new_genefile
 
         # Fix 5'overlaps 

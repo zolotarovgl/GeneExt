@@ -457,7 +457,7 @@ class Region:
 
 
 # GXF helper 
-def gffutils_import_gxf(filepath,merge_strategy = 'create_unique',verbose = False):
+def gffutils_import_gxf(filepath,merge_strategy = 'error',verbose = False):
     if verbose > 0:
         print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
     db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = merge_strategy,transform = gffutils_transform_func,keep_order = True)
@@ -1410,32 +1410,36 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 
 ######################### Longest transcript per gene ########################
 
-def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False):
-    db = gffutils_import_gxf(infile,merge_strategy="merge",verbose = 0) # 4.12.2023: try merging genes with identical IDs
+def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False,removed_log = None):
+    db = gffutils_import_gxf(infile,merge_strategy="error",verbose = 0) 
+    # 4.12.2023: try merging genes with identical IDs; 25.02.24 - infers non-existing gene IDs
+    
     # Create a dictionary to store the longest transcript for each gene
     g2tid = {}
     g2t = {}
     # Iterate over all genes in the database
     cnt = 1
     not_cnt = 0
-    for gene in db.features_of_type('gene'):
-        if not gene.id and infmt == 'gtf': 
-            gene.id = gene[['gene_id']]
-        transcripts = [x for x in db.children(gene, featuretype='transcript')]
-        if len(transcripts)>0:
-            lengths = {x.id:x.end-x.start for x in transcripts}
-            t2model= {x.id:x for x in transcripts}
-            g2tid[gene.id] = max(lengths, key=lengths.get)
-            g2t[gene.id] = t2model[max(lengths, key=lengths.get)]
-        else:
-            if(verbose > 2):
-                print('select_longest_transcript: no transcripts found for gene %s!' % gene.id)
-            not_cnt += 1
-        cnt += 1 
-    if verbose:
-        print('%s genes - %s transcripts' % (cnt,len(g2t)))
-        if not_cnt > 0:  
-            print('%s genes with no transcripts!' % not_cnt)
+    with open(removed_log, "a") as removed_genes_file:
+        for gene in db.features_of_type('gene'):
+            if not gene.id and infmt == 'gtf': 
+                gene.id = gene[['gene_id']]
+            transcripts = [x for x in db.children(gene, featuretype='transcript')]
+            if len(transcripts)>0:
+                lengths = {x.id:x.end-x.start for x in transcripts}
+                t2model= {x.id:x for x in transcripts}
+                g2tid[gene.id] = max(lengths, key=lengths.get)
+                g2t[gene.id] = t2model[max(lengths, key=lengths.get)]
+            else:
+                if(verbose > 2):
+                    print('select_longest_transcript: no transcripts found for gene %s!' % gene.id)
+                removed_genes_file.write(gene.id + "\tno transcript\n")
+                not_cnt += 1
+            cnt += 1 
+        if verbose:
+            print('%s genes - %s transcripts' % (cnt,len(g2t)))
+            if not_cnt > 0:  
+                print('%s genes with no transcripts!\nWritten to %s' % (not_cnt,removed_log))
     
     
     
