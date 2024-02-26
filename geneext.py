@@ -414,7 +414,7 @@ if __name__ == "__main__":
     do_report = False # DEV
 
     #do_fix_only = args.onlyfix
-    do_fix_only = True # DEV
+    do_fix_only = False # DEV
 
     do_orphan = args.orphan
     do_orphan_merge =  do_orphan and not args.nocluster
@@ -576,7 +576,8 @@ if __name__ == "__main__":
             new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
             if verbose:
                 print('Selecting the longest transcript per gene ...',end = " ")
-            removed_genes_log = tempdir + '/' + 'removed_genes.txt'
+
+            removed_genes_log = tempdir + '/' + 'removed_genes.txt' # file storing the names of the genes removed
             helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose,removed_log = removed_genes_log)
             if verbose:
                 print('Done selecting the longest transcript per gene.\nRemoved genes written to: %s' % removed_genes_log)
@@ -595,9 +596,10 @@ if __name__ == "__main__":
                 print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
             genefile = new_genefile
 
-        # Re-order genefile by the order of chromosomes 
+        # Re-order genefile by the order of chromosomes - what for? 
         helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose)
 
+        quit()
     # SJ DEV: what would be an appropriate place to put this function 
     ##################################################
     # Input:
@@ -613,7 +615,7 @@ if __name__ == "__main__":
     # 3. Extend the genes to the most downstream peaks (as a continuous regions?)
     # 4. The rest of the gene extensions should proceed as specified before.   
     ##################################################
-        do_sj = True
+        do_sj = False
         if do_sj:
             genic_bed = tempdir + '/' + 'sj.genic.bed'
             helper.get_genic_bed(genefile = genefile,outfile = genic_bed)

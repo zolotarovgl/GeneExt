@@ -457,7 +457,7 @@ class Region:
 
 
 # GXF helper 
-def gffutils_import_gxf(filepath,merge_strategy = 'error',verbose = False):
+def gffutils_import_gxf(filepath,merge_strategy = 'create_unique',verbose = False):
     if verbose > 0:
         print('\tgffutils: creating a database in memory (may take a while for a big .gff/.gtf)...')
     db = gffutils.create_db(filepath, ':memory:',disable_infer_genes=True,disable_infer_transcripts=True, merge_strategy = merge_strategy,transform = gffutils_transform_func,keep_order = True)
@@ -1411,8 +1411,8 @@ def mRNA2transcript(infile = None,outfile = None,verbose = False):
 ######################### Longest transcript per gene ########################
 
 def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = None,verbose = False,removed_log = None):
-    db = gffutils_import_gxf(infile,merge_strategy="error",verbose = 0) 
-    # 4.12.2023: try merging genes with identical IDs; 25.02.24 - infers non-existing gene IDs
+    db = gffutils_import_gxf(infile,merge_strategy="create_unique",verbose = 0) 
+    # 4.12.2023: try merging genes with identical IDs; 25.02.24 - infers non-existing gene
     
     # Create a dictionary to store the longest transcript for each gene
     g2tid = {}
@@ -1420,7 +1420,7 @@ def select_longest_transcript(infile= None,outfile = None,infmt = None,outfmt = 
     # Iterate over all genes in the database
     cnt = 1
     not_cnt = 0
-    with open(removed_log, "a") as removed_genes_file:
+    with open(removed_log, "w") as removed_genes_file:
         for gene in db.features_of_type('gene'):
             if not gene.id and infmt == 'gtf': 
                 gene.id = gene[['gene_id']]
@@ -1621,6 +1621,9 @@ def clip5_process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
                     else:
                         if verbose > 2:
                             print('Child feature is fully contained within a downstream gene - OMITTING:\n%s\n%s' % (str(child),str(ovgene)))
+#                            with open(removed_log, "a") as removed_genes_file:
+#                                removed_genes_file.write(gene.id + "\tno transcript\n")
+
                         pass
                 else:
                     if verbose > 2:
@@ -1635,7 +1638,7 @@ def clip5_process_gene(gene,genes,db,verbose = False,tag = '_5clip'):
         return(outstr,logstr)
 
 
-def clip5_worker_process(genes, infile, i, results,logs,verbose,tag):
+def clip5_worker_process(genes, infile, i, results,logs,verbose,tag,removed_log = None):
     db = gffutils.create_db(
         infile,
         ":memory:",
@@ -1678,8 +1681,6 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
     #)
 
     db = gffutils_import_gxf(infile,verbose = False)
-
-
 
     genes = [x for x in db.features_of_type("gene")]
     print("%s genes loaded." % len(genes))
