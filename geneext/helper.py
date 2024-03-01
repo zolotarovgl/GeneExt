@@ -1717,3 +1717,10 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
         for log in logs:
             if len(log)>0:
                 outf.write(''.join(log))
+
+
+
+# Plot gene extensions 
+def plot_extensions(infile,outfile):
+    cmd='Rscript geneext/plot_extensions.r %s %s' % (infile,outfile)
+    subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
