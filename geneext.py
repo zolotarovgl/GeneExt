@@ -809,7 +809,8 @@ if __name__ == "__main__":
         else:
             orphan_bed = None
         report_extensions(file_path = tempdir+'/extensions.tsv',orphan_bed = orphan_bed,n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
-        helper.plot_extensions(infile = tempdir+'/extensions.tsv',outfile = outputfile + '.pdf')
+        helper.plot_extensions(infile = tempdir+'/extensions.tsv',outfile = outputfile + '.extension_length.pdf',verbose = verbose)
+        helper.plot_peaks(genic = tempdir + '/genic_peaks.bed',noov = tempdir + '/allpeaks_noov.bed',outfile = outputfile + '.peak_coverage.pdf',peak_perc = coverage_percentile,verbose=verbose)
 
         if do_estimate:
             report_estimate()

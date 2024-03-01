@@ -1726,10 +1726,17 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
 
 
 # Plot gene extensions 
-def plot_extensions(infile,outfile):
-    cmd='Rscript geneext/plot_extensions.r %s %s' % (infile,outfile)
+def plot_extensions(infile,outfile,verbose = 0):
+    cmd='Rscript geneext/plot_extensions.R %s %s' % (infile,outfile)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
     subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
+def plot_peaks(genic,noov,outfile,peak_perc,verbose = 0):
+    cmd='Rscript geneext/peak_density.R %s %s %s %s ' % (genic,noov,outfile,peak_perc)
+    if verbose > 1:
+        print('Running:\n\t%s' % cmd)
+    subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 # Check if the file is present and has a content:
 
