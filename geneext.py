@@ -322,7 +322,7 @@ def run_genefile_fix(genefile,infmt):
             helper.mRNA2transcript(infile = genefile,outfile = new_genefile, verbose = verbose)
             genefile = new_genefile
             if verbose > 0:
-                print("New file name: %s" % genefile)
+                print("Added transcript features. New file name: %s" % genefile)
         else:
             pipeline_error_print("Missing 'transcript' or 'mRNA' features in the genome annotation file %s!" % genefile)
             quit()
@@ -350,7 +350,7 @@ def run_genefile_fix(genefile,infmt):
             print('Fix done, annotation with gene features: %s' % new_genefile )
         genefile = new_genefile
         if verbose > 0:
-            print("New file name: %s" % genefile)
+            print("Added gene feature names. New file name: %s" % genefile)
     return(genefile)
     
 
@@ -578,10 +578,12 @@ if __name__ == "__main__":
                 print('Selecting the longest transcript per gene ...',end = " ")
 
             removed_genes_log = tempdir + '/' + 'removed_genes.txt' # file storing the names of the genes removed
-            helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = outfmt,verbose = verbose,removed_log = removed_genes_log)
+            helper.select_longest_transcript(infile = genefile,outfile = new_genefile,infmt = infmt,outfmt = infmt,verbose = verbose,removed_log = removed_genes_log)
             if verbose:
                 print('Done selecting the longest transcript per gene.\nRemoved genes written to: %s' % removed_genes_log)
             genefile = new_genefile
+            helper.check_file_size(new_genefile,verbose = verbose)
+
 
         # Fix 5'overlaps 
         if do_5clip:
@@ -595,9 +597,15 @@ if __name__ == "__main__":
             if verbose > 2:
                 print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
             genefile = new_genefile
+            helper.check_file_size(genefile,verbose= verbose )
 
-        # Re-order genefile by the order of chromosomes - what for? 
+
+        
+        # Re-order genefile by the order of chromosomes - what for?
         helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose)
+        if verbose:
+            print('Done reordering by bam: %s' % genefile)
+        helper.check_file_size(genefile,verbose = verbose)
 
     # SJ DEV: what would be an appropriate place to put this function 
     ##################################################
