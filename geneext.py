@@ -599,7 +599,6 @@ if __name__ == "__main__":
         # Re-order genefile by the order of chromosomes - what for? 
         helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose)
 
-        quit()
     # SJ DEV: what would be an appropriate place to put this function 
     ##################################################
     # Input:
@@ -802,6 +801,7 @@ if __name__ == "__main__":
         else:
             orphan_bed = None
         report_extensions(file_path = tempdir+'/extensions.tsv',orphan_bed = orphan_bed,n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
+        helper.plot_extensions(infile = tempdir+'/extensions.tsv',outfile = outputfile + '.pdf')
 
         if do_estimate:
             report_estimate()
