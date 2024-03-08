@@ -62,7 +62,9 @@ def split_strands(bamfile,outdir,verbose = False,threads = 1):
 
 def run_macs2(bamfile,peaks_prefix,outdir,verbose = False):
     """This function launches MACS2 to call peaks from a .bam file"""
-    cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
+    #cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
+    # 8.03.2024 - mimic peaks2utr command 
+    cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--extsize", "200", "--broad", "--nomodel","-n",peaks_prefix,"--outdir", outdir)
     try:
         if verbose > 1:
             print('Running:\n\t%s' % ' '.join(cmd))
@@ -938,6 +940,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
             if len(overlapped)>0:
                 if verbose > 2:
                     print('%s overlaps the genes: %s' % (gene.id,','.join([x.id for x in overlapped])))
+                    # CAVE: instead of the deleting the overlaps, the overlap should be trimmed!
                     del extend_dictionary[gene.id]      
             else:
                 # get the list of genes to consider for extension clipping:
