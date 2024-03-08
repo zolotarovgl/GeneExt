@@ -907,6 +907,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
 
     # Assign genes to the most downstream peaks below extension threshold:
     peaks2genes = {x.split('\t')[0]:[x.split('\t')[1],int(x.split('\t')[2])] for x in out.split('\n')[:-1]}
+
     genes2peaks = {gene:[(k,v[1]) for k,v in peaks2genes.items() if gene in v] for gene in set([v[0] for v in peaks2genes.values()])}
     if verbose > 1:
         print('======== Asssigning genes to peaks =============')
@@ -918,7 +919,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
         print('======== Gene extension statistics =============')
     # Select the most downstream peak per gene if not more than threshold 
     # TODO: simplify
-    extend = {k:[x for x in v if abs(x[1])<maxdist] for k,v in genes2peaks.items()} 
+    extend = {k:[x for x in v if abs(x[1])<=maxdist] for k,v in genes2peaks.items()} 
     extend = {k:v for k,v in extend.items() if v}
     extend = {k:[x for x in v if x[1] == min([x[1] for x in v ])][0] for k,v in extend.items()}
     extend_dictionary = {k:abs(v[1]) for k,v in extend.items()}
