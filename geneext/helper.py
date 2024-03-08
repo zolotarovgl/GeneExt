@@ -928,20 +928,23 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
     if verbose > 1:
         print("Checking extensions ...")
     upd_counter = 0
-    # for each gene extension, check if it's extension interferes with any of the genes on the same chromosome and strand.
+    # For each gene extension, check if it's extension interferes with any of the genes on the same chromosome and strand.
     # Drop extensions for the genes already overlapping other genes. 
     for gene in genes:
         if gene.id in extend_dictionary.keys():
             # Screen for gene overlaps - remove the genes from extension if overlapping other genes regardless of the strand 
-            if gene.strand == '+':
-                overlapped = [x for x in genes if x.start <= gene.end and x.end  > gene.end and x.chrom == gene.chrom]
-            elif gene.strand == '-':
-                overlapped = [x for x in genes if x.end >= gene.start and x.end < gene.end and x.chrom == gene.chrom]
-            if len(overlapped)>0:
-                if verbose > 2:
-                    print('%s overlaps the genes: %s' % (gene.id,','.join([x.id for x in overlapped])))
-                    # CAVE: instead of the deleting the overlaps, the overlap should be trimmed!
-                    del extend_dictionary[gene.id]      
+            # 08.03.24: CAVE: this prevents the genes with ANY overlaps from being extended - disable 
+            remove_with_overlaps = False
+            if remove_with_overlaps:
+                if gene.strand == '+':
+                    overlapped = [x for x in genes if x.start <= gene.end and x.end  > gene.end and x.chrom == gene.chrom]
+                elif gene.strand == '-':
+                    overlapped = [x for x in genes if x.end >= gene.start and x.end < gene.end and x.chrom == gene.chrom]
+                if len(overlapped)>0:
+                    if verbose > 2:
+                        print('%s overlaps the genes: %s; removing the extension' % (gene.id,','.join([x.id for x in overlapped])))
+                        # CAVE: instead of the deleting the overlaps, the overlap should be trimmed!
+                        del extend_dictionary[gene.id]      
             else:
                 # get the list of genes to consider for extension clipping:
                 if clip_mode == 'sense':
