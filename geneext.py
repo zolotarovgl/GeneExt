@@ -34,6 +34,7 @@ parser.add_argument('-tag', default = str('GeneExt'), help = 'Tag to be added to
 parser.add_argument('-v','--verbose', default = int(0), help = 'Verbosity level. [0],1,2,3')
 parser.add_argument('-j','--jobs', default = '1', help = 'Number of parallel cores. [1]')
 parser.add_argument('--output_mode', default = 'new_transcript', help = 'How to extend the gene (only for .gff/.gtf files) [new_transcript]\n\t* new_transcript - creates a new transcript feature with the last exon extended\n\t* new_exon - creates an extended last exon')
+parser.add_argument('-l','--longest',action='store_true', help = 'Whether to select the longest isoform per gene.')
 parser.add_argument('--clip_strand',default = 'sense',help = 'How to treat gene extension overlaps.\nsense - default,restrict overlaps into downstream genes on the same strand\nboth - restrict overlaps regardless of the strand.')
 parser.add_argument('--clip_5prime', action='store_true', help = 
 '''Use this to clip overlaps between genes. The downstream gene will be clipped.
@@ -442,7 +443,7 @@ if __name__ == "__main__":
         logfilename = "GeneExt.log"
     sys.stdout = Logger(logfilename)
 
-    do_longest = True # whether to select the longest transcript per gene 
+    do_longest = args.longest # whether to select the longest transcript per gene # 08.03 Changed
     write_original_transcript = False # whether to write down the original transcript features
 #################################################################
 

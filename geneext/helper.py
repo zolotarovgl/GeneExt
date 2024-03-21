@@ -64,6 +64,7 @@ def run_macs2(bamfile,peaks_prefix,outdir,verbose = False):
     """This function launches MACS2 to call peaks from a .bam file"""
     #cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
     # 8.03.2024 - mimic peaks2utr command 
+    # the previous command leads to more peaks called 
     cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--extsize", "200", "--broad", "--nomodel","-n",peaks_prefix,"--outdir", outdir)
     try:
         if verbose > 1:
