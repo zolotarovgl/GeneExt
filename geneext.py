@@ -164,6 +164,7 @@ def run_orphan():
             print('Orphan peaks: merging by distance.')
         orphan_merged_bed  = tempdir + '/' + 'orphan_merged.bed'
         chrnamesfile = tempdir + '/chr_names.txt'
+        helper.get_chr_names(bamfile, chrnamesfile,verbose = verbose)
         helper.merge_orphan_distance(orphan_bed = orphan_bed,chr_names = chrnamesfile,orphan_merged_bed = orphan_merged_bed,genic_bed = genefile_ext_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
         if verbose:
             print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
