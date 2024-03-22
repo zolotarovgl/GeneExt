@@ -791,8 +791,8 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             elif not feature.id in extend_dictionary.keys(): # write the gene and all children as they are in the file:
                 written_exons = []
                 written_features = [] # this is to check whether the feature has already been written 
-                if verbose:
-                    print("%s shoudn't be extended - omitting..." % feature.id)
+                #if verbose:
+                #    print("%s shoudn't be extended - omitting..." % feature.id)
                 if outfmt == infmt:  
                     if not str(feature) in written_features:
                         fout.write(str(feature) + '\n') # genes and transcripts are children of themselves
