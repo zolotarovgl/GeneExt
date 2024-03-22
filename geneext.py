@@ -427,7 +427,7 @@ if __name__ == "__main__":
     orphan_maximum_distance= int(args.orphan_maxdist) if args.orphan_maxdist else None # DEV
     maxdist_quant = 0.75
     orphan_maximum_size = int(args.orphan_maxsize) if args.orphan_maxsize else None
-    maxsize_quant = 0.5
+    maxsize_quant = 0.75
     
     # Clipping 5'-overlaps 
     do_5clip = args.clip_5prime
