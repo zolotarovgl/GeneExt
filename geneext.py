@@ -313,6 +313,7 @@ def report_estimate():
 def run_genefile_fix(genefile,infmt):
     # Given an input file, check if it's missing "gene" and "transcript" features, if so, fix it and output an updated file name 
     features = helper.get_featuretypes(genefile)
+    helper.check_gene_exons(genefile,infmt = infmt,verbose = verbose)
     if not 'transcript' in features:
         console.print('Genome annotation warning: Could not find "transcript" features in %s! Trying to fix ...' % genefile,style = 'white')
         if 'mRNA' in features:

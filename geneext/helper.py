@@ -515,9 +515,20 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             elif infmt == 'gtf':
                 if not 'gene_id' in feature.attributes:
                     print(feature)
-                    exit("no gene_id attribute found for gene %s! ( see the feature line above)" % feature.id)    
+                    exit("no gene_id attribute found for gene %s! ( see the feature line above)" % feature.id)
+            
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
+            
+            if feature.id == 'Tadh_wf_g10001':
+                print(feature.id)
+                print(n_exons)
+                print(n_transcripts)
+                print(feature.id in extend_dictionary.keys())
+                print(feature)
+                print([x for x in db.children(db[feature.id])])
+                quit() # boo
+
             if n_exons and feature.id in extend_dictionary.keys(): 
                 # dictoinary with written exons:
                 written_exons = []
@@ -541,14 +552,14 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.end == max_end ][0]
                     last_exon.end = last_exon.end + extend_dictionary[feature.id]
                     if verbose > 2:
-                        print("Gene end chage: %s --> %s; %s" % (str(last_exon.end),str(last_exon.end+extend_dictionary[feature.id]),str(extend_dictionary[feature.id])))
+                        print("Gene end change: %s --> %s; %s" % (str(last_exon.end),str(last_exon.end+extend_dictionary[feature.id]),str(extend_dictionary[feature.id])))
                 elif db[feature.id].strand == '-':
                     feature.start = db[feature.id].start - extend_dictionary[feature.id]
                     max_end = min([f.start for f in db.children(db[feature.id],featuretype='exon')])
                     last_exon = [x for x in db.children(db[feature.id],featuretype='exon') if x.start == max_end ][0]
                     last_exon.start = last_exon.start - extend_dictionary[feature.id]
                     if verbose > 2:
-                        print("Gene end chage: %s --> %s; %s" % (str(last_exon.start),str(str(last_exon.start-extend_dictionary[feature.id])),str(extend_dictionary[feature.id])))
+                        print("Gene end change: %s --> %s; %s" % (str(last_exon.start),str(str(last_exon.start-extend_dictionary[feature.id])),str(extend_dictionary[feature.id])))
                 
                 if infmt == 'gff':
                     if not 'Parent' in last_exon.attributes:
@@ -780,8 +791,8 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             elif not feature.id in extend_dictionary.keys(): # write the gene and all children as they are in the file:
                 written_exons = []
                 written_features = [] # this is to check whether the feature has already been written 
-                #if verbose:
-                #    print("%s shoudn't be extended - omitting..." % feature.id)
+                if verbose:
+                    print("%s shoudn't be extended - omitting..." % feature.id)
                 if outfmt == infmt:  
                     if not str(feature) in written_features:
                         fout.write(str(feature) + '\n') # genes and transcripts are children of themselves
@@ -1332,6 +1343,50 @@ def get_featuretypes(infile = None):
     """To quickly check whether the file contains genes"""
     with open(infile) as file:
         return(set(line.split('\t')[2] for line in file if not '#' in line))
+
+
+
+def check_gene_exons(infile, infmt='gtf', output_file='genes_with_missing_exons.txt',verbose = 0):
+    """
+    Load the GTF/GFF file using gffutils and check if every gene has children exons.
+    If exons are missing for any gene, copy CDS features and use them as exons.
+    Write the list of genes with missing exons into a separate file.
+    
+    Parameters:
+        filename (str): Path to the GTF/GFF file.
+        infmt (str): Input format of the file ('gtf' or 'gff'). Defaults to 'gtf'.
+        output_file (str): Path to the output file to write the list of genes with missing exons. Defaults to 'genes_with_missing_exons.txt'.
+    """
+
+    def add_missing_exons(gene_id=None):
+        raise NotImplementedError(f"Gene {gene_id} is missing exons! You need to either remove this gene or to add the exons manually!\n")
+
+    # Create a gffutils database
+    db = gffutils_import_gxf(infile,merge_strategy="create_unique",verbose = 0) 
+    
+    if verbose > 0:
+        print('Checking gene exons...')
+    
+    # List to store genes with missing exons
+    genes_with_missing_exons = []
+    
+    # Iterate over genes
+    for gene in db.features_of_type('gene'):
+        # Check if the gene has children exons
+        exons = list(db.children(gene, featuretype='exon'))
+        if not exons:
+            genes_with_missing_exons.append(gene.id)
+    
+    # Write the list of genes with missing exons into a file
+    if genes_with_missing_exons:
+        print(f"Genes with missing exons: {output_file}")
+        with open(output_file, 'w') as fout:
+            fout.write('\n'.join(genes_with_missing_exons))
+    
+    # Apply fix for genes with missing exons
+    if genes_with_missing_exons:
+        for gene_id in genes_with_missing_exons:
+            add_missing_exons(gene_id)
 
 def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False):
     # TODO: for multi-transcript files, the gene should be written only once!
