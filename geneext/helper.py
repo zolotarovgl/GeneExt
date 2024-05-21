@@ -883,7 +883,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
     if len(genes) == 0:
         print('No genes loaded! Please, make sure your .gff/gtf. file contains "gene" features!')
         quit()
-    #peaks_d = {peak.id:peak for peak in peaks}
+    #peaks_d = {peak.id:peak for peakf in peaks}
     #genes_d = {gene.id:gene for gene in genes}
 
     ####################### Assign peaks to genes, determine how much to extend #################################
@@ -1181,6 +1181,17 @@ def order_bed(infile,outfile,chrfile,verbose = 0):
         cmd = "bedtools sort -i %s -g %s > %s" % (infile,chrfile,outfile)
     else:
         cmd = "bedtools sort -i %s -g %s > %s.tmp; mv  %s.tmp %s" % (infile,chrfile,outfile,outfile,outfile)
+    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    if verbose > 1 :
+        print('Running:\n\t%s' % cmd)
+
+
+def fix_bed_start(infile,outfile,verbose = 0):
+    if infile != outfile:
+        cmd = "awk 'BEGIN{OFS=@\\t@}{if($2==0){$2=1};print $0}' %s > %s" % (infile,outfile)
+    else:
+        cmd = "awk 'BEGIN{OFS=@\\t@}{if($2==0){$2=1};print $0}' %s > %s.tmp; mv %s.tmp %s"  % (infile,outfile,outfile,outfile)
+    cmd = cmd.replace('@','"')
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     if verbose > 1 :
         print('Running:\n\t%s' % cmd)

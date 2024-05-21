@@ -708,6 +708,8 @@ if __name__ == "__main__":
                     #peaskfile_ordered = peaksfile.replace('.bed','.ordered.bed')
                     helper.get_chr_names(bamfile, chrnamesfile,verbose = verbose)
                     helper.order_bed(peaksfile,peaksfile,chrnamesfile,verbose = verbose)
+                    # fix peaks with 0-start coordinate 
+                    helper.fix_bed_start(peaksfile,peaksfile,verbose = verbose)
                     console.print('done',style = 'bold green')
             else:
                 print('Skipping macs2. Running gene extension with %s and %s.' % (peaksfile,genefile))
