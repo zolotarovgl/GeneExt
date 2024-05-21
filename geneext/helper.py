@@ -62,10 +62,16 @@ def split_strands(bamfile,outdir,verbose = False,threads = 1):
 
 def run_macs2(bamfile,peaks_prefix,outdir,verbose = False):
     """This function launches MACS2 to call peaks from a .bam file"""
+
     #cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "20", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
+    
+    # 06.05.2024 - use extsize 200
+
+    cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--keep-dup", "20","-q", "0.01" , "--shift", "1" ,"--extsize", "100", "--broad", "--nomodel", "--min-length", "30", "-n",peaks_prefix,"--outdir", outdir)
+
     # 8.03.2024 - mimic peaks2utr command 
     # the previous command leads to more peaks called 
-    cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--extsize", "200", "--broad", "--nomodel","-n",peaks_prefix,"--outdir", outdir)
+    #cmd = ("macs2","callpeak","-t", bamfile ,"-f", "BAM", "--extsize", "200", "--broad", "--nomodel","-n",peaks_prefix,"--outdir", outdir)
     try:
         if verbose > 1:
             print('Running:\n\t%s' % ' '.join(cmd))
@@ -897,7 +903,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
     if verbose > 1:
         print("Written temporary files:\n\t%s\n\t%s" % (peaks_path,genes_path) )
 
-    # use bedtools to identify the closest genes for every peak 
+    # use bedtools to identify the closest upstream gene for every peak 
     os.system('bedtools sort -i %s/_peaks_tmp > %s/_peaks_tmp_sorted' % (temp_dir,temp_dir))
     os.system('bedtools sort -i %s/_genes_tmp > %s/_genes_tmp_sorted' % (temp_dir,temp_dir))
     #cmd = "bedtools closest -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
