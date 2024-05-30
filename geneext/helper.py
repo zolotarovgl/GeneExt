@@ -290,9 +290,12 @@ def parse_gff(infile,featuretype = None):
 
 
 def parse_gtf(infile,featuretype = None):
+    print(infile) # boo
+    print('from parse_gtf')
     def gtf_get_ID(x):
         """x should be a string from the 9th field of a .gtf file. """
         o = [y.strip() for y in x.split(';') if len(y.strip())]
+        print(o)
         d = {k.split(' ')[0]:k.split(' ')[1].replace('"','') for k in o}
         if 'ID' in d.keys():
             return(d['ID'])
@@ -304,6 +307,9 @@ def parse_gtf(infile,featuretype = None):
     with open(infile) as file:
             lines = [line.rstrip().split('\t') for line in file if not '#' in line]
             if not featuretype:
+#                for x in lines:
+#                    print(x)
+#                    Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6]))
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6])) for x in lines]
             else:
                 regs = [Region(chrom = x[0],start = int(x[3]),end = int(x[4]),id = gtf_get_ID(str(x[8])),strand = str(x[6])) for x in lines if x[2]==featuretype]
@@ -525,15 +531,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
             
             n_exons = len([x for x in db.children(db[feature.id],featuretype='exon')])
             n_transcripts = len([x for x in db.children(db[feature.id],featuretype = 'transcript')])
-            
-            if feature.id == 'Tadh_wf_g10001':
-                print(feature.id)
-                print(n_exons)
-                print(n_transcripts)
-                print(feature.id in extend_dictionary.keys())
-                print(feature)
-                print([x for x in db.children(db[feature.id])])
-                quit() # boo
+
 
             if n_exons and feature.id in extend_dictionary.keys(): 
                 # dictoinary with written exons:
@@ -908,7 +906,7 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
     os.system('bedtools sort -i %s/_genes_tmp > %s/_genes_tmp_sorted' % (temp_dir,temp_dir))
     #cmd = "bedtools closest -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted  | cut -f 4,10,13  | awk '$3>=-%s'" % (temp_dir,temp_dir,maxdist)
     # awk 'BEGIN{OFS=@\\t@}{if($NF==0){if($6==@+@){$NF=-($3-$9)}else{$NF=-($8-$2)}};print $0}'
-    cmd = "bedtools closest -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted | awk '$NF!=-1' | awk '($6 == @+@ && $8<=$2)||($6==@-@ && $9 >= $3)' | awk 'BEGIN{OFS=@\\t@}{if($6==@+@){$NF=-($3-$9)}else{$NF=-($8-$2)};print $0}' | cut -f 4,10,13 | awk '$3>=-%s'" % (temp_dir,temp_dir,str(maxdist))
+    cmd = "bedtools closest -nonamecheck -id -s -D a -a %s/_peaks_tmp_sorted -b %s/_genes_tmp_sorted | awk '$NF!=-1' | awk '($6 == @+@ && $8<=$2)||($6==@-@ && $9 >= $3)' | awk 'BEGIN{OFS=@\\t@}{if($6==@+@){$NF=-($3-$9)}else{$NF=-($8-$2)};print $0}' | cut -f 4,10,13 | awk '$3>=-%s'" % (temp_dir,temp_dir,str(maxdist))
     cmd = cmd.replace('@','"')
     if verbose > 1:
         print('Running:\n\t\t%s > [output]' % cmd)
