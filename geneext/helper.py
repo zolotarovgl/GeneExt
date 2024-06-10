@@ -11,7 +11,24 @@ import pandas as pd
 
 # visual
 
-def print_logo(console):
+from rich.console import Console
+from rich.progress import Progress
+from rich.panel import Panel
+from rich.text import Text
+from rich.markup import escape
+
+# Visual settings
+console = Console()
+
+
+def pipeline_error_print(x=None,console = console):
+    console.print(x, style="bold red")
+    #print("\n"+x + '\n')
+    #os.system('cat %s/geneext/err.txt' % scriptloc)
+    quit()
+
+
+def print_logo(console = console):
     # Tool logo
     #with open('./geneext/ascii.txt', 'r') as file:
     #   ascii_art = file.read()
@@ -26,7 +43,7 @@ def print_logo(console):
           ______    ___    ______    
     -----[______]==[___]==[______]"""
     text2 = "===>"
-    text3 = "----\n\n    Gene model adjustment for improved single-cell RNA-seq data counting\n\n"
+    text3 = "----\n\n    Gene model adjustment for improved single-cell RNA-seq data quantification\n\n"
     console.print(text1, style="bold blue",end = '')
     console.print(text2, style="bold yellow",end = '')
     console.print(text3, style="bold blue")
@@ -139,7 +156,7 @@ def get_coverage(inputbed_a, input_bam, outputfile, verbose=0, mean=False, threa
     # split into chunks for threads
     chunks = [x for x in split(bed, threads)]
     if verbose:
-        print("mean chunk size: %s" % np.mean(np.array([len(x) for x in chunks])))
+        print("mean chunk size: %s" % round(np.mean(np.array([len(x) for x in chunks])),1))
     with open(outputfile, "w") as fout:
         if verbose > 1:
             print(f"Computing coverage for {str(len(bed))} peaks with {threads} threads...")
@@ -183,7 +200,7 @@ def get_coverage_percentile(inputfile = None,percentile = None, verbose = False)
         return('0')
 
 
-def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbose = False):
+def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbose = False,do_message = True):
     """
     Filter bed file by the last column
     """
@@ -191,13 +208,14 @@ def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbo
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    # Report how many peaks have been retained:
-    if verbose > 1:
+# Report how many peaks have been retained:
+    if do_message:
         ps = subprocess.Popen('wc -l %s' % outputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         n = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
         ps = subprocess.Popen('wc -l %s' % inputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         N = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
-        print('Retained %s/%s (%s %%)' % (str(n),str(N),str(round(int(n)/int(N)*100,2))))
+        return '\nRetained %s/%s (%s %%) intergenic peaks.' % (str(n),str(N),str(round(int(n)/int(N)*100,2)))
+
 
 def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False,f = 0.0001):
     """This function returns non-overlapping peaks"""
@@ -217,7 +235,7 @@ def intersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False):
         strand = '-s'
     else:
         strand = ''
-    cmd = "bedtools intersect -wa -a %s -b %s %s > %s" % (inputbed_a,inputbed_b,strand,outputbed)
+    cmd = "bedtools intersect -u -a %s -b %s %s > %s" % (inputbed_a,inputbed_b,strand,outputbed)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -290,12 +308,10 @@ def parse_gff(infile,featuretype = None):
 
 
 def parse_gtf(infile,featuretype = None):
-    print(infile) # boo
-    print('from parse_gtf')
+    
     def gtf_get_ID(x):
         """x should be a string from the 9th field of a .gtf file. """
         o = [y.strip() for y in x.split(';') if len(y.strip())]
-        print(o)
         d = {k.split(' ')[0]:k.split(' ')[1].replace('"','') for k in o}
         if 'ID' in d.keys():
             return(d['ID'])
@@ -1805,13 +1821,18 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
 
 # Plot gene extensions 
 def plot_extensions(infile,outfile,verbose = 0):
-    cmd='Rscript geneext/plot_extensions.R %s %s' % (infile,outfile)
+    script_path = os.path.abspath(__file__)
+    # Get the directory of the script
+    script_dir = os.path.dirname(script_path)
+    cmd='Rscript %s/plot_extensions.R %s %s' % (script_dir,infile,outfile)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
 def plot_peaks(genic,noov,outfile,peak_perc,verbose = 0):
-    cmd='Rscript geneext/peak_density.R %s %s %s %s ' % (genic,noov,outfile,peak_perc)
+    script_path = os.path.abspath(__file__)
+    script_dir = os.path.dirname(script_path)
+    cmd='Rscript %s/peak_density.R %s %s %s %s ' % (script_dir,genic,noov,outfile,peak_perc)
     if verbose > 1:
         print('Running:\n\t%s' % cmd)
     subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
