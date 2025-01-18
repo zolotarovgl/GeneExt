@@ -341,7 +341,6 @@ if __name__ == "__main__":
     # Read the configuration file:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config = read_yaml_config('%s/geneext/config.yml' % script_dir)
-
     helper.print_logo()
     console = Console()
     args = parser.parse_args()
@@ -625,13 +624,13 @@ if __name__ == "__main__":
                 if not orphan_maximum_size:
                     orphan_maximum_size = round(helper.get_quantile_gene_length(inputfile=genefile,fmt = infmt,q = config.orphan_maxsize_quant))
                     if verbose:
-                        print('Maximum size of orphan clusters is set to %s-th quantile of the gene lengths: %s' % (round(config.orphan_maxsize_quant*100),round(config.orphan_maximum_size)))
+                        print('Maximum size of orphan clusters is set to %s-th quantile of the gene lengths: %s' % (round(config.orphan_maxsize_quant*100),round(orphan_maximum_size)))
                 if not orphan_maximum_distance:
                     helper.get_intronic_bed(genefile = genefile,bamfile = bamfile, tempdir = tempdir, verbose = verbose)
                     bedfile = tempdir + '/reg.intronic.bed'
                     orphan_maximum_distance = round(helper.get_bed_length_q(bedfile,config.orphan_maxdist_quant))
                     if verbose:
-                        print('Maximum distance between peaks is set to %s-th quantile of intron lengths: %s' % (round(config.orphan_maxdist_quant*100),round(config.orphan_maximum_distance)))
+                        print('Maximum distance between peaks is set to %s-th quantile of intron lengths: %s' % (round(config.orphan_maxdist_quant*100),round(orphan_maximum_distance)))
 
 
         # 0. MAPPING - not implemented     
