@@ -9,7 +9,7 @@ Tool dependencies can be installed with `conda` or `mamba`:
 
 ```bash
 # create environment
-conda env create -n geneext -f environment.yaml
+conda env create -n geneext -f environment_full.yaml
 
 # activate environment
 conda activate geneext
