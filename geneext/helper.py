@@ -1179,16 +1179,47 @@ def get_genic_bed(genefile,outfile):
         for i,gene in enumerate(db.features_of_type("gene")):
             ofile.write("\t".join([gene.chrom,str(gene.start),str(gene.end),gene.id,"0",gene.strand])+'\n')
 
-def reorder_by_bam(genefile = None,bamfile = None,tempdir = None,verbose = 0):
-    # A crutch so that bedtools doesn't fail due to a different file order 
-    chrsizefile = tempdir + '/chr_sizes.tsv'
-    get_chr_sizes(bamfile = bamfile,outfile = chrsizefile)
-    cmd = "bedtools sort -i %s -g %s > %s; mv %s %s" % (genefile,chrsizefile,genefile + '.reord',genefile + '.reord',genefile)
-    if verbose > 1:
-        print('Running:\n\t%s' % cmd)
-    ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    if verbose > 0:
-        print('Done reordering genefile.')
+def reorder_by_bam(genefile = None,bamfile = None,tempdir = None,verbose = 0,console = None):
+	chrsizefile = tempdir + '/chr_sizes.tsv'
+	# write chromosome file
+	get_chr_sizes(bamfile = bamfile,outfile = chrsizefile)
+
+	cmd = f"cut -f 1 {genefile} | sort | uniq"
+	chr_genome = subprocess.check_output(f"cut -f 1 {genefile} | sort | uniq", shell=True, text=True).splitlines()
+	chr_bam = subprocess.check_output(f"cut -f 1 {chrsizefile} | sort | uniq", shell=True, text=True).splitlines()
+	chr_genome = set(chr_genome)
+	chr_bam = set(chr_bam)
+	if verbose > 0:
+		print(f'{len(chr_genome)} contings in genome')
+		print(f'{len(chr_bam)} contings in bam')
+	missing = chr_genome - chr_bam
+	if(len(missing)>0):
+		tmpfile = os.path.join(tempdir,'genome.allcontigs.gtf')
+		console.print(f"WARNING: {len(missing)} genome contigs are missing in the bam file (no mapping reads):\n{','.join([str(x) for x in missing][:10])}",style = 'red')
+		console.print(f'They will be removed!\nThe original genome annotation is copied here: {tmpfile}',style = 'red')
+		# filter the genome file
+		cmd = f'cp {genefile} {tmpfile}'
+		if verbose > 1:
+			print(cmd)
+		subprocess.run(cmd,shell=True)
+		check_file_size(tmpfile)
+		cmd = f"awk 'FNR==NR{{d[$1]=$1;next}} $1 in d' {chrsizefile} {genefile} > {genefile}.tmp"
+		if verbose > 1:
+			print(cmd)
+		subprocess.run(cmd, shell=True, text=True)
+		check_file_size(genefile + '.tmp')
+		subprocess.run(f'mv {genefile}.tmp {genefile}',shell = True)
+	# filter 
+	cmd = "bedtools sort -i %s -g %s > %s; mv %s %s" % (genefile,chrsizefile,genefile + '.reord',genefile + '.reord',genefile)
+	#cmd = "bedtools sort -i %s -g %s > %s" % (genefile,chrsizefile,genefile + '.reord')
+	if verbose > 1:
+		console.print('Running:\n\t%s' % cmd)
+	ps = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+	check_file_size(genefile)
+	if verbose > 0:
+		console.print('Done reordering genefile.')
+
+
 
 def order_bed(infile,outfile,chrfile,verbose = 0):
     if infile != outfile:

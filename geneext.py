@@ -576,9 +576,7 @@ if __name__ == "__main__":
             helper.check_file_size(genefile,verbose= verbose )
 
         # Re-order genefile by the order of chromosomes - what for?
-        helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose)
-        if verbose:
-            print('Done reordering by bam: %s' % genefile)
+        helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose,console = console)
         helper.check_file_size(genefile,verbose = verbose)
 
     # SJ DEV: what would be an appropriate place to put this function 
