@@ -60,7 +60,7 @@ parser.add_argument('-subsamplebam','--subsamplebam',default = None, help = 'If 
 #parser.add_argument('--report', action='store_true', help = 'Use this option to generate a PDF report.')
 parser.add_argument('-keep','--keep_intermediate_files', action='store_true', help = 'Use this to keep .bam and other temporary files in the a temporary directory. Useful for troubleshooting.')
 #parser.add_argument('--estimate', action='store_true', help = 'Use this to just estimate intergenic read proportion.\nUseful for quick checking intergenic mapping rate.')
-#parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
+parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt will only try to fix the annotation, no extension is performed.')
 parser.add_argument('-force','--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
 parser.add_argument('-rerun','--rerun', action='store_true', help = 'If set, GeneExt will try to re-run the analysis using previously computed files it finds in the temporary directory (subsampled data, MACS2 results, peaks with coverage etc.).')
 
@@ -373,7 +373,7 @@ if __name__ == "__main__":
     # peak coverage percentile:
     coverage_percentile = args.peak_perc
 
-    # pipeline execution:
+    # pipeline execution:--subsamplebam 1000000
     do_macs2 = args.bam is not None  
     do_subsample = args.subsamplebam is not None
     #do_estimate = args.estimate # the option has been removed for the sake of clarity 
@@ -398,6 +398,9 @@ if __name__ == "__main__":
     # Rerun 
     do_rerun = args.rerun
 
+    # onlyfix
+    do_onlyfix = args.onlyfix
+
 
     class Logger(object):
         def __init__(self,logfilename):
@@ -420,6 +423,8 @@ if __name__ == "__main__":
         logfilename = "GeneExt.log"
     sys.stdout = Logger(logfilename)
 
+#################################################################
+
     do_longest = args.longest # whether to select the longest transcript per gene 
     
 #################################################################
@@ -432,8 +437,11 @@ if __name__ == "__main__":
 
 
     # If fix_only set - report only doing genome annotation fixes:
-    if config.do_fix_only:
-        print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.genome))
+    #if config.do_fix_only:
+    #    print("CAVE: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.genome))
+
+    if do_onlyfix:
+        console.print("WARNING: --onlyfix is set. Only fixing the genome annotation file %s, no extension will be performed!" % (args.genome),style = 'bold red')
 
     console.print(Panel.fit("[bold blue]Preflight checks[/bold blue]", border_style="bold blue"), end = end)
 
@@ -567,13 +575,14 @@ if __name__ == "__main__":
 
         # Fix 5'overlaps 
         if do_5clip:
-            print("Clipping 5' overlaps in genes using %s cores..." % str(threads))
+            console.print(Panel.fit("[bold blue]5' clipping[/bold blue]", border_style="bold blue"))
+            console.print("Clipping 5' overlaps in genes using %s cores..." % str(threads), style = 'white')
             new_genefile = tempdir + '/' + 'genome.fixed.' + infmt
-            helper.clip_5_overlaps(infile = genefile,outfile = new_genefile,threads = threads,verbose = verbose)
-            if verbose > 2:
-                print("Fixed 5' overlaps in genes: %s -> %s" % (genefile,new_genefile))
+            clip_logfile = new_genefile + '.5clip.log'
+            clip_out = helper.clip_5_overlaps(infile = genefile,outfile = new_genefile,logfile = clip_logfile,threads = threads,verbose = verbose)
+            console.print("Fixed %s gene five-prime overlaps: %s -> %s\nLog: %s" % (len(clip_out),genefile,new_genefile,clip_logfile))
             genefile = new_genefile
-            helper.check_file_size(genefile,verbose= verbose )
+            helper.check_file_size(genefile,verbose = verbose )
 
         # Re-order genefile by the order of chromosomes - what for?
         helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose,console = console)
@@ -600,6 +609,9 @@ if __name__ == "__main__":
             helper.get_genic_bed(genefile = genefile,outfile = genic_bed)
             
     #quit() #sj
+    if(do_onlyfix):
+        console.print(Panel.fit("[bold blue]End of fix[/bold blue]", border_style="bold blue")) 
+        quit()
     console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
     ##################################################
     if not config.do_fix_only:

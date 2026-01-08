@@ -27,31 +27,20 @@ def pipeline_error_print(x=None,console = console):
 	#os.system('cat %s/geneext/err.txt' % scriptloc)
 	quit()
 
-
-def print_logo(console = console):
+def print_logo(console = console,path = 'logo.txt'):
 	# Tool logo
-	#with open('./geneext/ascii.txt', 'r') as file:
-	#   ascii_art = file.read()
-	#ascii_art = escape(ascii_art)
-	text1 = """
-	  ____                 _____      _   
-	 / ___| ___ _ __   ___| ____|_  _| |_ 
-	| |  _ / _ \ '_ \ / _ \  _| \ \/ / __|
-	| |_| |  __/ | | |  __/ |___ >  <| |_ 
-	 \____|\___|_| |_|\___|_____/_/\_\\__|
-	 
-		  ______    ___    ______    
-	-----[______]==[___]==[______]"""
+	from pathlib import Path
+	here = Path(__file__).resolve().parent
+	ascii_path = here / path
+	with open(ascii_path) as f:
+		text1 = f.read().rstrip("\n")
 	text2 = "===>"
 	text3 = "----\n\n    Gene model adjustment for improved single-cell RNA-seq data quantification\n\n"
 	console.print(text1, style="bold blue",end = '')
 	console.print(text2, style="bold yellow",end = '')
 	console.print(text3, style="bold blue")
 
-
-
 # directory handling 
-
 def get_prefixed_path(file_path, prefix='tmp_'):
 	# Turns the specified path into the directory with a "tmp_" prefix
 	directory, filename = os.path.split(file_path)
@@ -1813,9 +1802,10 @@ def clip5_worker_process(genes, infile, i, results,logs,verbose,tag,removed_log 
 	logs[i] = log
 
 
-def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag = 'GeneExt_5clip'):
-	logfile = outfile + '5clip.log'
+def clip_5_overlaps(infile = None,outfile = None,logfile = None,threads = 1,verbose = False,tag = 'GeneExt_5clip'):
 	import math
+	if not logfile:
+		logfile = outfile + '5clip.log'
 	# Load the database
 	if verbose > 1:
 		print('Loading gene database.')
@@ -1856,6 +1846,7 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
 	# Combine the results from all the worker processes
 	final_results = results
 
+	
 	# Write the final results to the output file
 	with open(outfile, "w") as outf:
 		for result in final_results:
@@ -1865,6 +1856,11 @@ def clip_5_overlaps(infile = None,outfile = None,threads = 1,verbose = False,tag
 		for log in logs:
 			if len(log)>0:
 				outf.write(''.join(log))
+	out = []
+	for log in logs:
+		for x in log:
+			out.append(x)
+	return(out)
 
 
 
