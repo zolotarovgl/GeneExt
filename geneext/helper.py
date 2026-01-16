@@ -557,7 +557,7 @@ def extend_gff(db,extend_dictionary,output_file,extension_mode,tag,verbose = Fal
 
 
 			if n_exons and feature.id in extend_dictionary.keys(): 
-				# dictoinary with written exons:
+				# dictionary with written exons:
 				written_exons = []
 				if verbose > 2:
 					print(feature.id)
@@ -1041,12 +1041,12 @@ def extend_genes(genefile,peaksfile,outfile,maxdist,temp_dir,verbose,extension_m
 		raise(NotImplementedError())
 	elif outfmt == 'gff':
 		if verbose > 1:
-			print('\tOutptut format - gff') 
+			print('\tOutput format - gff') 
 		db = gffutils_import_gxf(genefile)
 		extend_gff(db,extend_dictionary,outfile,extension_mode = extension_mode,tag = tag,verbose = verbose,infmt = infmt,outfmt = outfmt,write_original_transcript = write_original_transcript)
 	elif outfmt == 'gtf':
 		if verbose > 1:
-			print('\tOutptut format - gtf') 
+			print('\tOutput format - gtf') 
 		db = gffutils_import_gxf(genefile)
 		extend_gff(db,extend_dictionary,outfile,extension_mode = extension_mode,tag = tag,verbose = verbose, infmt = infmt,outfmt = outfmt)
 	else:
@@ -1081,8 +1081,6 @@ def add_orphan_peaks(infile = None,peaksbed = None,fmt = None,tmp_outfile = None
 					file.write('\t'.join([reg.chrom,tag,'gene',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"' % gid])+'\n')
 					file.write('\t'.join([reg.chrom,tag,'transcript',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid,tid)])+'\n')
 					file.write('\t'.join([reg.chrom,tag,'exon',str(reg.start),str(reg.end),'.',reg.strand,'.','gene_id "%s"; transcript_id "%s"' % (gid, tid)])+'\n')
-		if verbose > 0:
-			print('%s orphan peaks added' % (str(len(regs))))
 
 
 
@@ -1192,7 +1190,7 @@ def reorder_by_bam(genefile = None,bamfile = None,tempdir = None,verbose = 0,con
 	get_chr_sizes(bamfile = bamfile,outfile = chrsizefile)
 
 	cmd = f"cut -f 1 {genefile} | sort | uniq"
-	chr_genome = subprocess.check_output(f"cut -f 1 {genefile} | sort | uniq", shell=True, text=True).splitlines()
+	chr_genome = subprocess.check_output(f"cut -f 1 {genefile} | sort | uniq | grep -v '#'", shell=True, text=True).splitlines()
 	chr_bam = subprocess.check_output(f"cut -f 1 {chrsizefile} | sort | uniq", shell=True, text=True).splitlines()
 	chr_genome = set(chr_genome)
 	chr_bam = set(chr_bam)
@@ -1406,6 +1404,12 @@ def count_reads(bamfile=None,bed = None,flags = '',threads=1,verbose = False):
 	Nread = ps.communicate()[0].decode("utf-8").rstrip()
 	return(int(Nread))
 
+def count_lines(file):
+	cmd = f'wc -l {file} | cut -f 1 -d " " '
+	ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+	N = ps.communicate()[0].decode("utf-8").rstrip()
+	return(N)
+
 
 # add missing genes to the annotation file 
 def get_featuretypes(infile = None):
@@ -1427,8 +1431,10 @@ def check_gene_exons(infile, infmt='gtf', output_file='genes_with_missing_exons.
 		output_file (str): Path to the output file to write the list of genes with missing exons. Defaults to 'genes_with_missing_exons.txt'.
 	"""
 
-	def add_missing_exons(gene_id=None):
-		raise NotImplementedError(f"Gene {gene_id} is missing exons! You need to either remove this gene or to add the exons manually!\n")
+	def add_missing_exons(gene_id=None,db = None):
+		children = list(db.children(gene_id, level=None))
+		if children:
+			raise NotImplementedError(f"Gene {gene_id} is missing exons! You need to either remove this gene or to add the exons manually!\n")
 
 	# Create a gffutils database
 	db = gffutils_import_gxf(infile,merge_strategy="create_unique",verbose = 0) 
@@ -1450,12 +1456,14 @@ def check_gene_exons(infile, infmt='gtf', output_file='genes_with_missing_exons.
 	if genes_with_missing_exons:
 		print(f"Genes with missing exons: {output_file}")
 		with open(output_file, 'w') as fout:
-			fout.write('\n'.join(genes_with_missing_exons))
-	
+			for gene in genes_with_missing_exons:
+				fout.write(gene + '\n')
+	if genes_with_missing_exons:
+		print(f'WARNING: {len(genes_with_missing_exons)} genes with missing exons! Written to: {output_file}')
 	# Apply fix for genes with missing exons
 	if genes_with_missing_exons:
 		for gene_id in genes_with_missing_exons:
-			add_missing_exons(gene_id)
+			add_missing_exons(gene_id,db = db)
 
 def add_gene_features(infile = None,outfile = None, infmt = None,verbose = False):
 	# TODO: for multi-transcript files, the gene should be written only once!
@@ -1808,7 +1816,7 @@ def clip_5_overlaps(infile = None,outfile = None,logfile = None,threads = 1,verb
 		logfile = outfile + '5clip.log'
 	# Load the database
 	if verbose > 1:
-		print('Loading gene database.')
+		print('Loading gene database...')
 	#db = gffutils.create_db(
 	#    infile,
 	#    ":memory:",

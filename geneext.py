@@ -64,8 +64,6 @@ parser.add_argument('--onlyfix', action='store_true', help = 'If set, GeneExt wi
 parser.add_argument('-force','--force', action='store_true', help = 'If set, GeneExt will ignore previously computed files and will re-run everythng from scratch.')
 parser.add_argument('-rerun','--rerun', action='store_true', help = 'If set, GeneExt will try to re-run the analysis using previously computed files it finds in the temporary directory (subsampled data, MACS2 results, peaks with coverage etc.).')
 
-
-
 ########### Pipeline Functions ################
 ###############################################
    
@@ -137,12 +135,14 @@ def get_orphan(genefile = None,genefile_ext_bed = None,peaks_bed = None,orphan_b
 
 # Pipeline: orphan peaks 
 def run_orphan():
+    print_task('Adding orphan peaks')
     genefile_ext_bed = tempdir + '/' + 'genes_ext.bed'
     orphan_bed = tempdir + '/' + 'orphan.bed'
     # if no bam file provided - no coverage filtering - all peaks not overlapping the genes. Else - coverage-filtered peaks. 
     get_orphan(genefile = outputfile, genefile_ext_bed= genefile_ext_bed,peaks_bed = peaksfilt,orphan_bed = orphan_bed,infmt = infmt, outfmt = outfmt, verbose = verbose)
+    console.print('done',style = 'bold green') 
     if verbose:
-        print('Orphan peaks: orphan peaks generated.')
+        print(f'Orphan peaks: {helper.count_lines(orphan_bed)} orphan peaks generated')
     if do_orphan_merge:
         if verbose:
             print('Orphan peaks: merging by distance.')
@@ -150,41 +150,38 @@ def run_orphan():
         chrnamesfile = tempdir + '/chr_names.txt'
         helper.get_chr_names(bamfile, chrnamesfile,verbose = verbose)
         helper.merge_orphan_distance(orphan_bed = orphan_bed,chr_names = chrnamesfile,orphan_merged_bed = orphan_merged_bed,genic_bed = genefile_ext_bed,tempdir = tempdir,maxdist = orphan_maximum_distance,maxsize = orphan_maximum_size, verbose = verbose)
+        N_init = helper.count_lines(orphan_bed)
+        N_merge = helper.count_lines(orphan_merged_bed)
+        console.print(f'Merged {N_init} orphan peaks into {N_merge} clusters:',style = 'bold yellow',end = '')
+        console.print(f' {orphan_merged_bed}',style = 'yellow')
         if verbose:
             print('Orphan peaks: merged peaks - %s' % orphan_merged_bed)
-        helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_merged_bed,fmt = outfmt,verbose=verbose,tag = tag) 
+        helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_merged_bed,fmt = outfmt,verbose=verbose,tag = tag)
+        orphan_bed = orphan_merged_bed
     else:
-        if verbose:
+        if verbose>2:
             print('Orphan peaks: no merging -> directly adding orphan peaks.')
         helper.add_orphan_peaks(infile = outputfile,peaksbed=orphan_bed,fmt = outfmt,verbose=verbose,tag = tag)  
+    console.print('Added %s orphan peaks / clusters.' % helper.count_lines(orphan_bed),style = 'bold yellow')
 
 # Reporting functions 
-def generate_report():
-    """This function will take as an input gene extensions and plot the distributions"""
-    with open(tempdir + '/_callcmd','w') as outfile:
-        outfile.write(callcmd + '\n')
-    cmd = 'Rscript %s/geneext/report.r %s %s %s %s %s %s %s %s' % (scriptloc,maxdist,str(int(coverage_percentile)/100),tempdir + '/_genes_peaks_closest',covfile,peaksfilt,tempdir+'/extensions.tsv',str(verbose),outputfile)
-    if verbose > 1:
-        print('Running:\n%s' % cmd)
-    os.system(cmd)
-
-def is_file_empty(file_path):
-    """Check if a file has zero lines."""
-    with open(file_path, 'r') as file:
-        return not any(file)
 
 def report_extensions(file_path,orphan_bed = None,n_genes = None):
+    def is_file_empty(file_path):
+        """Check if a file has zero lines."""
+        with open(file_path, 'r') as file:
+            return not any(file)
     """Load a tabular file, report the number of rows and median value of the last column."""
     if not is_file_empty(file_path):
         df = pd.read_csv(file_path,sep = '\t')
         num_rows = len(df)
         median_value = round(df.iloc[:, -1].median(), 1)
         console.print('Extended %s/%s genes\nMedian extension length: %s bp' % (num_rows,n_genes,median_value),style = 'bold green')
-        if orphan_bed:
-            # report the number of orphan peaks / clusters added 
-            df = pd.read_csv(orphan_bed,sep = '\t')
-            num_rows = len(df)
-            console.print('Added %s orphan peaks / clusters.' % num_rows,style = 'bold green')
+        #if orphan_bed:
+        #    # report the number of orphan peaks / clusters added 
+        #    df = pd.read_csv(orphan_bed,sep = '\t')
+        #    num_rows = len(df)
+        #    console.print('Added %s orphan peaks / clusters.' % num_rows,style = 'bold green')
             
     else:
         console.print('No genes could be extended',style = 'bold red')
@@ -486,7 +483,7 @@ if __name__ == "__main__":
     found_covfile = path.isfile(covfile) and path.isfile(peaksfilt) and path.isfile(peaksfilt)
 
 ##################################################################
-    if not config.do_fix_only:
+    if not config.do_fix_only and not do_onlyfix:
         # parse input and output formats - run the pipeline accordingly
         if peaksfile is None and bamfile is None:
             pipeline_error_print("Please, specify either alignment [-b] or peaks file [-p]!")
@@ -582,11 +579,14 @@ if __name__ == "__main__":
             clip_out = helper.clip_5_overlaps(infile = genefile,outfile = new_genefile,logfile = clip_logfile,threads = threads,verbose = verbose)
             console.print("Fixed %s gene five-prime overlaps: %s -> %s\nLog: %s" % (len(clip_out),genefile,new_genefile,clip_logfile))
             genefile = new_genefile
-            helper.check_file_size(genefile,verbose = verbose )
+            #helper.check_file_size(genefile,verbose = verbose )
 
-        # Re-order genefile by the order of chromosomes - what for?
-        helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose,console = console)
-        helper.check_file_size(genefile,verbose = verbose)
+        # Re-order genefile by the order of chromosomes - ISSUE: updates the time stamps 
+        if bamfile:
+            do.reorder = False
+            if do.reorder:
+                helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose,console = console)
+                helper.check_file_size(genefile,verbose = verbose)
 
     # SJ DEV: what would be an appropriate place to put this function 
     ##################################################
@@ -649,7 +649,7 @@ if __name__ == "__main__":
                 raise(NotImplementedError())
         # 0.1 BAM SUBSAMPLING  
             if do_subsample:
-                print_task('Running subsampling')
+                print_task('Running bam subsampling')
                 # check if subsampled
                 if do_rerun and found_subsampled and not do_force and verbose > 0:
                     print('Found %s! Skipping subsampling' % subsampled_bam)
@@ -763,11 +763,10 @@ if __name__ == "__main__":
 
         # 4. Add orphan peaks
             if do_orphan:
-                #console.print('======== Adding orphan peaks ===================',style = 'bold yellow', end = end)
-                print_task('Adding orphan peaks')
+                #console.print('======== Adding orphan peaks ===================',style = 'bold yellow', end = end)run_
                 #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
                 run_orphan()
-                console.print('done',style = 'bold green')
+                
             if config.do_report:
                 #print('======== Creating PDF report =======================')
                 print_task('Creating PDF report')
