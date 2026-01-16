@@ -583,8 +583,8 @@ if __name__ == "__main__":
 
         # Re-order genefile by the order of chromosomes - ISSUE: updates the time stamps 
         if bamfile:
-            do.reorder = False
-            if do.reorder:
+            do_reorder = False
+            if do_reorder:
                 helper.reorder_by_bam(genefile = genefile,bamfile = bamfile,tempdir = tempdir,verbose = verbose,console = console)
                 helper.check_file_size(genefile,verbose = verbose)
 
