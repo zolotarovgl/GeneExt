@@ -5,6 +5,7 @@ from argparse import RawTextHelpFormatter
 from geneext.config import read_yaml_config
 from geneext import helper
 from geneext.helper import pipeline_error_print
+from geneext.report import generate_html_report
 
 from rich.console import Console
 from rich.progress import Progress
@@ -399,26 +400,40 @@ if __name__ == "__main__":
     do_onlyfix = args.onlyfix
 
 
-    class Logger(object):
-        def __init__(self,logfilename):
-            self.terminal = sys.stdout
-            self.log = open(logfilename, "a")
-    
+    # ── Logging setup ─────────────────────────────────────────────────────
+    # TeeLogger writes to both the real terminal and a plain-text log file.
+    # It forwards isatty() so Rich keeps its colours on the terminal; the
+    # ANSI/Rich control sequences are stripped before reaching the log file.
+    import re as _re
+    _ANSI_RE = _re.compile(
+        r'\x1b\[[0-9;]*[mKJHA-Za-z]'  # CSI sequences (colours, cursor)
+        r'|\x1b\([A-Z]'               # charset sequences
+        r'|\x1b\]\d+;[^\x07]*\x07' # OSC sequences
+        r'|\r'                          # carriage returns (Rich progress)
+    )
+
+    class TeeLogger:
+        def __init__(self, log_path):
+            self._term = sys.__stdout__
+            self._log  = open(log_path, 'w', encoding='utf-8', errors='replace')
+
         def write(self, message):
-            self.terminal.write(message)
-            self.log.write(message)  
+            self._term.write(message)
+            self._log.write(_ANSI_RE.sub('', message))
 
         def flush(self):
-            # this flush method is needed for python 3 compatibility.
-            # this handles the flush command by doing nothing.
-            # you might want to specify some extra behavior here.
-            pass 
-    # Logging 
-    if outputfile:
-        logfilename = outputfile + ".GeneExt.log"
-    else:
-        logfilename = "GeneExt.log"
-    sys.stdout = Logger(logfilename)
+            self._term.flush()
+            self._log.flush()
+
+        def isatty(self):
+            # Report the real terminal's isatty so Rich enables colours
+            return self._term.isatty()
+
+        def fileno(self):
+            return self._term.fileno()
+
+    logfilename = (outputfile + ".GeneExt.log") if outputfile else "GeneExt.log"
+    sys.stdout = TeeLogger(logfilename)
 
 #################################################################
 
@@ -614,9 +629,11 @@ if __name__ == "__main__":
         quit()
     console.print(Panel.fit("[bold blue]Execution[/bold blue]", border_style="bold blue"))
     ##################################################
+    count_threshold = None   # set later if coverage filtering is performed
+
     if not config.do_fix_only:
-        # parse input file format: 
-        if not config.do_estimate_only:    
+        # parse input file format:
+        if not config.do_estimate_only:
             #-1. Index input bam 
             if bamfile:
                 if not os.path.isfile(bamfile + '.bai'):
@@ -767,12 +784,6 @@ if __name__ == "__main__":
                 #run_orphan(infmt = infmt,outfmt = outfmt,verbose = verbose,merge = do_orphan_merge)
                 run_orphan()
                 
-            if config.do_report:
-                #print('======== Creating PDF report =======================')
-                print_task('Creating PDF report')
-                raise(NotImplementedError())
-                generate_report()
-
         # 5. Estimate intergenic mapping
             if config.do_estimate:
                 console.print('======== Estimating intergenic mapping =========',style = 'bold yellow')
@@ -796,8 +807,26 @@ if __name__ == "__main__":
                 orphan_bed = tempdir + '/orphan.bed'
         else:
             orphan_bed = None
-        report_extensions(file_path = tempdir+'/extensions.tsv',orphan_bed = orphan_bed,n_genes=helper.get_number_of_genes(genefile,fmt = infmt))
-        
+        n_genes = helper.get_number_of_genes(genefile, fmt=infmt)
+        report_extensions(file_path=tempdir+'/extensions.tsv', orphan_bed=orphan_bed, n_genes=n_genes)
+
+        # Always generate the interactive HTML web summary
+        try:
+            report_path = generate_html_report(
+                tempdir=tempdir,
+                outputfile=outputfile,
+                genefile=genefile,
+                infmt=infmt,
+                coverage_percentile=coverage_percentile,
+                count_threshold=count_threshold,
+                do_estimate=config.do_estimate,
+                n_genes=n_genes,
+                run_args=' '.join(sys.argv),
+            )
+            console.print('HTML report written to: [bold cyan]%s[/bold cyan]' % report_path)
+        except Exception as e:
+            console.print('[yellow]Warning: could not generate HTML report: %s[/yellow]' % str(e))
+
         if config.do_plots:
             helper.plot_extensions(infile = tempdir+'/extensions.tsv',outfile = outputfile + '.extension_length.pdf',verbose = verbose)
             helper.plot_peaks(genic = tempdir + '/genic_peaks.bed',noov = tempdir + '/allpeaks_noov.bed',outfile = outputfile + '.peak_coverage.pdf',peak_perc = coverage_percentile,verbose=verbose)
