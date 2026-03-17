@@ -174,24 +174,6 @@ def get_coverage(inputbed_a, input_bam, outputfile, verbose=0, mean=False, threa
 	if verbose:
 		print('Done computing coverage: %s' % (outputfile))
 		print(f"{round(e/len(bed)*1000,2)} ms per region")
-###############################################################################
-# WRONG function - does not compute the coverage percentile correctly!
-###############################################################################
-def get_coverage_percentile(inputfile = None,percentile = None, verbose = False):
-	"""Given an input bed file with a coverage, get a coverage percentile"""
-	percentile = int(percentile)
-	if percentile > 0:
-		if verbose > 0:
-				print('Getting a %s-th percentile ...' % percentile)
-		cmd = "cut -f 7 %s  | sort -n | awk 'BEGIN{c=0} length($0){a[c]=$0;c++}END{p=(c/100*%s); p=p%%1?int(p)+1:p; print a[c-p-1]}'" % (inputfile,str(100-percentile))
-		if verbose > 1:
-			print('Running:\n\t%s' % cmd)
-		ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-		out = ps.communicate()[0].decode("utf-8").rstrip()
-		return(out)
-	else:
-		return('0')
-	
 def get_coverage_percentile(inputfile=None, percentile=None, verbose=False):
 	import pandas as pd
 	import numpy as np
