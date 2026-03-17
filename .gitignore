@@ -16,3 +16,7 @@ build/
 # Editor / OS
 .DS_Store
 *.swp
+
+# Pipeline temporary/intermediate output directories
+tmp/
+tmp_*/
