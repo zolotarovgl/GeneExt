@@ -497,7 +497,7 @@ if __name__ == "__main__":
 
     if not config.do_estimate:
         # check output file:
-        if outputfile is None and not do_estimate:
+        if outputfile is None and not config.do_estimate:
             pipeline_error_print('Please, specify the output file [-o]!')
 
         elif peaksfile is not None:

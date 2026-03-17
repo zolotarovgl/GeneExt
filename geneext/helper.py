@@ -113,7 +113,10 @@ def count_reads_in_region(region, aln):
 
 def compute_mean_coverage(region, aln):
 	read_count = aln.count(contig=region.chrom, start=region.start, stop=region.end, region=None, until_eof=False, read_callback='nofilter', reference=None, end=None)
-	mean_coverage = read_count / (region.end - region.start)
+	length = region.end - region.start
+	if length == 0:
+		return 0.0
+	mean_coverage = read_count / length
 	return mean_coverage
 
 
@@ -198,7 +201,10 @@ def get_coverage_percentile(inputfile=None, percentile=None, verbose=False):
 
 	if verbose:
 		print(f"Computing the {percentile}-th percentile ...")
-	df = pd.read_csv(inputfile, sep='\t', header=None, comment='#', usecols=[6])
+	try:
+		df = pd.read_csv(inputfile, sep='\t', header=None, comment='#', usecols=[6])
+	except pd.errors.EmptyDataError:
+		return '0'
 	df = pd.to_numeric(df[6], errors='coerce').dropna()
 	if df.empty:
 		return '0'
@@ -221,7 +227,9 @@ def filter_by_coverage(inputfile = None,outputfile = None,threshold = None,verbo
 		n = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
 		ps = subprocess.Popen('wc -l %s' % inputfile,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 		N = ps.communicate()[0].decode("utf-8").rstrip().split(' ')[0]
-		return '\nRetained %s/%s (%s %%) intergenic peaks.' % (str(n),str(N),str(round(int(n)/int(N)*100,2)))
+		N_int = int(N)
+		pct = round(int(n)/N_int*100,2) if N_int > 0 else 0.0
+		return '\nRetained %s/%s (%s %%) intergenic peaks.' % (str(n),str(N),str(pct))
 
 
 def outersect(inputbed_a,inputbed_b,outputbed,by_strand = True,verbose = False,f = 0.0001):
@@ -431,10 +439,10 @@ class Region:
 	def get_distance(region_a,region_b):
 		if not Region.is_overlapping(region_a,region_b):
 			if region_a.chrom == region_b.chrom:
-				if region_a.strand and region_b.strand == '+':
-				# compare the ends 
+				if region_a.strand == '+' and region_b.strand == '+':
+				# compare the ends
 					return(abs(region_a.end - region_b.end))
-				elif region_a.strand and region_b.strand == '-':
+				elif region_a.strand == '-' and region_b.strand == '-':
 					return(abs(region_a.start - region_b.start))
 				else:
 					# Not on the same strand 
@@ -1318,8 +1326,6 @@ def get_chr_sizes(bamfile = None,outfile = None,verbose = False):
 		if verbose > 1:
 			print("Indexing %s" % bamfile)
 		index_bam(bamfile,verbose = verbose,threads=1)
-		quit()
-		#quit('Index the bam file!') 
 	cmd = "samtools idxstats %s | cut -f 1-2 | awk '$2!=0' > %s" % (bamfile,outfile)
 	cmd = cmd.replace('__','"')
 	if verbose > 1 :
@@ -1390,7 +1396,8 @@ def estimate_mapping(bamfile=None,genicbed=None,intergenicbed=None,threads=1,ver
 		Ngen = int(Ngen)
 		#Nigen = int(Nigen)
 		Nigen = int(Nmap - Ngen)
-		
+		return (Ntot, Nmap, Ngen, Nigen)
+
 def count_reads(bamfile=None,bed = None,flags = '',threads=1,verbose = False):
 	# Genic reads
 	if bed:
