@@ -70,7 +70,7 @@ If problems persist, don't hesitate to contact the authors.
 
 If you use this tool, please cite:
 
-> Zolotarov, G., Grau-Bové, X., & Sebé-Pedrós, A.  
+> Grygoriy Zolotarov, Xavier Grau-Bové, Arnau Sebé-Pedrós 
 > **GeneExt: a gene model extension tool for enhanced single-cell RNA-seq analysis**  
-> *bioRxiv* 2023.12.05.570120  
-> https://doi.org/10.1101/2023.12.05.570120
+> *Bioinformatics* , Volume 42, Issue 3, March 2026, btag094,
+> https://doi.org/10.1093/bioinformatics/btag094
