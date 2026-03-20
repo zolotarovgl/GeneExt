@@ -823,7 +823,7 @@ if __name__ == "__main__":
                 n_genes=n_genes,
                 run_args=' '.join(sys.argv),
             )
-            console.print('HTML report written to: [bold cyan]%s[/bold cyan]' % report_path)
+            console.print('[bold green]HTML report written to:[bold green] [bold cyan]%s[/bold cyan]' % report_path)
         except Exception as e:
             console.print('[yellow]Warning: could not generate HTML report: %s[/yellow]' % str(e))
 

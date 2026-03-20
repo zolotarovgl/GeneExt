@@ -14,6 +14,7 @@ page is fully functional even without internet access.
 
 from __future__ import annotations
 
+import base64
 import datetime
 import json
 import math
@@ -36,6 +37,29 @@ def _read_bed_col(path: str, col: int) -> list[float]:
         if df.shape[1] <= col:
             return []
         return pd.to_numeric(df.iloc[:, col], errors="coerce").dropna().tolist()
+    except Exception:
+        return []
+
+
+def _count_bed_lines(path: str) -> int:
+    """Return the number of data rows in a BED file (ignores comment lines)."""
+    if not os.path.exists(path):
+        return 0
+    try:
+        df = pd.read_csv(path, sep="\t", header=None, comment="#")
+        return len(df)
+    except Exception:
+        return 0
+
+
+def _read_bed_widths(path: str) -> list[int]:
+    """Return peak widths (end - start, bp) from BED columns 1 and 2 (0-indexed)."""
+    if not os.path.exists(path):
+        return []
+    try:
+        df = pd.read_csv(path, sep="\t", header=None, comment="#", usecols=[1, 2])
+        widths = (df.iloc[:, 1] - df.iloc[:, 0]).tolist()
+        return [int(w) for w in widths if w > 0]
     except Exception:
         return []
 
@@ -73,6 +97,65 @@ def _log10_histogram(
 
     labels = [f"{(edges[i] + edges[i + 1]) / 2:.3f}" for i in range(len(edges) - 1)]
     return labels, _bin(genic), _bin(noov)
+
+
+def _count_bam_reads(bam_path: str) -> int:
+    """Count alignment records in a BAM file using samtools view -c."""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["samtools", "view", "-c", bam_path],
+            capture_output=True, text=True, timeout=120,
+        )
+        if r.returncode == 0:
+            return int(r.stdout.strip())
+    except Exception:
+        pass
+    return 0
+
+
+def _get_reads_info(tempdir: str) -> dict:
+    """
+    Return the number of reads used for peak calling and whether the BAM was subsampled.
+
+    Priority:
+      1. subsampled.bam  — used when --subsamplebam was set
+      2. plus.bam + minus.bam — the strand-split BAMs actually fed to MACS2
+      3. MACS2 xls "total tags" — fallback if BAM files are unavailable
+    """
+    subsampled_bam = os.path.join(tempdir, "subsampled.bam")
+    subsampled = os.path.exists(subsampled_bam)
+
+    # Option 1: subsampled.bam
+    if subsampled:
+        n = _count_bam_reads(subsampled_bam)
+        if n > 0:
+            return {"n_reads": n, "subsampled": True}
+
+    # Option 2: plus.bam + minus.bam
+    total = 0
+    for fname in ("plus.bam", "minus.bam"):
+        p = os.path.join(tempdir, fname)
+        if os.path.exists(p):
+            total += _count_bam_reads(p)
+    if total > 0:
+        return {"n_reads": total, "subsampled": subsampled}
+
+    # Option 3: MACS2 xls fallback
+    xls_total = 0
+    for fname in ("plus_peaks.xls", "minus_peaks.xls"):
+        path = os.path.join(tempdir, fname)
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as fh:
+                for line in fh:
+                    if line.startswith("# total tags in treatment:"):
+                        xls_total += int(line.split(":")[1].strip())
+                        break
+        except Exception:
+            pass
+    return {"n_reads": xls_total, "subsampled": subsampled}
 
 
 def _parse_mapping_stats(path: str) -> list[dict]:
@@ -140,7 +223,7 @@ def generate_html_report(
     Parameters
     ----------
     tempdir            : directory containing intermediate pipeline files
-    outputfile         : final annotation path (report lands at outputfile + '.web_summary.html')
+    outputfile         : final annotation path (report lands at outputfile + '.Report.html')
     genefile           : original input annotation path
     infmt              : 'gtf' | 'gff' | 'bed'
     coverage_percentile: percentile used for peak filtering  (0 = disabled)
@@ -149,17 +232,35 @@ def generate_html_report(
     n_genes            : total gene count in the original annotation
     run_args           : command-line string for display in the report
     """
-    # ── Extension lengths ────────────────────────────────────────────────────
+    # ── Extension lengths + table ─────────────────────────────────────────────
     ext_path = os.path.join(tempdir, "extensions.tsv")
     ext_lengths: list[float] = []
+    ext_table: list[dict] = []
     if os.path.exists(ext_path):
         try:
             df_ext = pd.read_csv(ext_path, sep="\t", header=None)
             ext_lengths = (
                 pd.to_numeric(df_ext.iloc[:, -1], errors="coerce").dropna().tolist()
             )
+            if df_ext.shape[1] >= 3:
+                for _, row in df_ext.iterrows():
+                    ext_val = pd.to_numeric(row.iloc[2], errors="coerce")
+                    ext_table.append({
+                        "gene": str(row.iloc[0]),
+                        "peak": str(row.iloc[1]),
+                        "ext":  int(ext_val) if not pd.isna(ext_val) else 0,
+                    })
         except Exception:
             pass
+
+    # ── Logo (embedded as base64 for self-contained HTML) ────────────────────
+    logo_b64 = ""
+    logo_path = os.path.join(os.path.dirname(__file__), "..", "img", "logo.png")
+    try:
+        with open(logo_path, "rb") as _f:
+            logo_b64 = base64.b64encode(_f.read()).decode()
+    except Exception:
+        pass
 
     n_extended  = len(ext_lengths)
     pct_extended = round(n_extended / n_genes * 100, 1) if n_genes > 0 else 0.0
@@ -184,6 +285,22 @@ def generate_html_report(
         except Exception:
             pass
 
+    # ── Orphan peaks (prefer merged clusters) ────────────────────────────────
+    orphan_bed_text = ""
+    for _fname in ("orphan_merged.bed", "orphan.bed"):
+        _p = os.path.join(tempdir, _fname)
+        if os.path.exists(_p):
+            try:
+                with open(_p) as _f:
+                    orphan_bed_text = _f.read()
+            except Exception:
+                pass
+            break
+    n_orphan_merged = orphan_bed_text.count("\n") if orphan_bed_text else 0
+
+    # ── Reads (from MACS2 xls) ───────────────────────────────────────────────
+    reads_info = _get_reads_info(tempdir)
+
     # ── Mapping stats ────────────────────────────────────────────────────────
     mapping_stats = (
         _parse_mapping_stats(os.path.join(tempdir, "mapping_stats.txt"))
@@ -202,8 +319,11 @@ def generate_html_report(
             "max_ext":        max_ext,
             "n_genic_peaks":  len(genic_cov),
             "n_noov_peaks":   len(noov_cov),
+            "n_orphan_peaks": n_orphan_merged,
             "cov_percentile": coverage_percentile,
             "cov_threshold":  count_threshold,
+            "n_reads":        reads_info["n_reads"],
+            "subsampled":     reads_info["subsampled"],
             "output_file":    os.path.basename(outputfile),
             "input_file":     os.path.basename(genefile),
             "run_date":       datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -217,10 +337,12 @@ def generate_html_report(
             "log10_threshold": log10_thr,
         },
         "mapping_stats": mapping_stats,
+        "ext_table": ext_table,
+        "orphan_bed": orphan_bed_text,
     }
 
-    html = _render_html(payload)
-    report_path = outputfile + ".web_summary.html"
+    html = _render_html(payload, logo_b64=logo_b64)
+    report_path = outputfile + ".Report.html"
     with open(report_path, "w") as fh:
         fh.write(html)
     return report_path
@@ -230,9 +352,15 @@ def generate_html_report(
 # HTML template
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _render_html(data: dict) -> str:
+def _render_html(data: dict, logo_b64: str = "") -> str:
     payload_json = json.dumps(data, indent=None, separators=(",", ":"))
     s = data["summary"]
+    logo_html = (
+        f'<img src="data:image/png;base64,{logo_b64}"'
+        f' style="height:34px;width:auto;display:block">'
+        if logo_b64 else
+        '<div class="logo-icon">G</div>'
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -246,15 +374,16 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 
 /* ── header ─────────────────────────────────────────────────────────────── */
 header{{background:linear-gradient(135deg,#0f3460 0%,#16213e 60%,#0a1628 100%);
-        color:#fff;padding:22px 36px 18px;display:flex;align-items:center;
+        color:#fff;padding:16px 36px;display:flex;align-items:stretch;
         justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.35)}}
-.logo{{display:flex;align-items:center;gap:14px}}
-.logo-icon{{width:42px;height:42px;background:linear-gradient(135deg,#00b4d8,#48cae4);
-            border-radius:10px;display:flex;align-items:center;justify-content:center;
-            font-size:22px;font-weight:900;color:#0f3460;flex-shrink:0}}
-.logo-text h1{{font-size:1.45rem;font-weight:700;letter-spacing:.4px}}
-.logo-text p{{font-size:.75rem;opacity:.7;margin-top:2px}}
-.run-meta{{text-align:right;font-size:.72rem;opacity:.65;line-height:1.7}}
+.logo{{display:flex;align-items:center}}
+.logo img{{height:100%;max-height:64px;min-height:40px;width:auto;display:block;
+           filter:brightness(0) invert(1)}}
+.logo-icon{{width:50px;height:50px;background:linear-gradient(135deg,#00b4d8,#48cae4);
+            border-radius:12px;display:flex;align-items:center;justify-content:center;
+            font-size:26px;font-weight:900;color:#0f3460;flex-shrink:0}}
+.run-meta{{text-align:right;font-size:.72rem;opacity:.65;line-height:1.8;
+           display:flex;flex-direction:column;justify-content:center}}
 
 /* ── main container ──────────────────────────────────────────────────────── */
 main{{max-width:1200px;margin:28px auto;padding:0 24px}}
@@ -265,8 +394,12 @@ main{{max-width:1200px;margin:28px auto;padding:0 24px}}
                 padding-bottom:6px;border-bottom:2px solid #dce3ee}}
 
 /* ── stat cards ──────────────────────────────────────────────────────────── */
+.card-group-label{{font-size:.65rem;font-weight:700;letter-spacing:1px;
+                   text-transform:uppercase;color:#8695a8;margin:20px 0 8px;
+                   padding-left:2px}}
+.card-group-label:first-child{{margin-top:0}}
 .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-        gap:14px;margin-bottom:28px}}
+        gap:14px;margin-bottom:6px}}
 .card{{background:#fff;border-radius:12px;padding:18px 20px;
        box-shadow:0 1px 4px rgba(0,0,0,.08);border-top:3px solid transparent;
        transition:box-shadow .15s}}
@@ -323,21 +456,51 @@ footer{{text-align:center;font-size:.7rem;color:#aab4c0;padding:20px 0 32px}}
 /* ── chart-unavailable banner ────────────────────────────────────────────── */
 .chart-unavailable{{display:none;align-items:center;justify-content:center;
                     height:100%;font-size:.8rem;color:#aab4c0;flex-direction:column;gap:6px}}
+
+/* ── clickable card ──────────────────────────────────────────────────────── */
+.card.clickable{{cursor:pointer}}
+.card.clickable:hover{{box-shadow:0 6px 20px rgba(0,0,0,.16);transform:translateY(-1px)}}
+
+/* ── modal ───────────────────────────────────────────────────────────────── */
+.modal-backdrop{{display:none;position:fixed;inset:0;background:rgba(10,22,40,.55);
+                 z-index:1000;align-items:center;justify-content:center}}
+.modal-backdrop.open{{display:flex}}
+.modal{{background:#fff;border-radius:14px;width:min(860px,94vw);max-height:82vh;
+        display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.28)}}
+.modal-header{{display:flex;align-items:center;justify-content:space-between;
+               padding:18px 24px;border-bottom:1px solid #dce3ee}}
+.modal-header h2{{font-size:.95rem;font-weight:700;color:#1a2332}}
+.modal-close{{border:none;background:none;font-size:1.3rem;color:#8695a8;
+              cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px}}
+.modal-close:hover{{background:#f0f2f5;color:#1a2332}}
+.modal-search{{padding:12px 24px;border-bottom:1px solid #eef1f7}}
+.modal-search input{{width:100%;padding:8px 12px;border:1px solid #dce3ee;
+                     border-radius:8px;font-size:.82rem;outline:none}}
+.modal-search input:focus{{border-color:#00b4d8}}
+.modal-body{{overflow-y:auto;padding:0}}
+.modal-body table{{width:100%;border-collapse:collapse;font-size:.82rem}}
+.modal-body thead tr{{background:#f4f7fb;position:sticky;top:0}}
+.modal-body th{{padding:9px 16px;text-align:left;font-weight:700;color:#5a7194;
+                font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;
+                cursor:pointer;user-select:none;white-space:nowrap}}
+.modal-body th:hover{{color:#0f3460}}
+.modal-body th .sort-icon{{margin-left:4px;opacity:.4}}
+.modal-body th.sort-active .sort-icon{{opacity:1}}
+.modal-body td{{padding:8px 16px;border-bottom:1px solid #eef1f7;color:#2d3e50}}
+.modal-body tr:last-child td{{border-bottom:none}}
+.modal-body tr:hover td{{background:#fafbff}}
+.modal-footer{{padding:10px 24px;border-top:1px solid #eef1f7;font-size:.72rem;color:#8695a8}}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <div class="logo-icon">G</div>
-    <div class="logo-text">
-      <h1>GeneExt</h1>
-      <p>3&prime; gene-annotation extension pipeline</p>
-    </div>
+    {logo_html}
   </div>
   <div class="run-meta">
     <div>Output: <strong>{s['output_file']}</strong></div>
-    <div>Input:  {s['input_file']}</div>
+    <div>Input: {s['input_file']}</div>
     <div>{s['run_date']}</div>
   </div>
 </header>
@@ -346,7 +509,7 @@ footer{{text-align:center;font-size:.7rem;color:#aab4c0;padding:20px 0 32px}}
 
   <!-- ── Summary cards ─────────────────────────────────────────────────── -->
   <p class="section-title">Run summary</p>
-  <div class="cards" id="cards"></div>
+  <div id="summaryCards"></div>
 
   <!-- ── Charts ────────────────────────────────────────────────────────── -->
   <p class="section-title">Distributions</p>
@@ -385,6 +548,32 @@ footer{{text-align:center;font-size:.7rem;color:#aab4c0;padding:20px 0 32px}}
 
 </main>
 
+<!-- ── Extended genes modal ──────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="extModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Extended genes</h2>
+      <button class="modal-close" id="extModalClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-search">
+      <input type="search" id="extSearch" placeholder="Filter by gene or peak ID&hellip;">
+    </div>
+    <div class="modal-body">
+      <table id="extTable">
+        <thead>
+          <tr>
+            <th data-col="gene">Gene ID <span class="sort-icon">&#9661;</span></th>
+            <th data-col="peak">Peak ID <span class="sort-icon">&#9661;</span></th>
+            <th data-col="ext" class="sort-active">Extension (bp) <span class="sort-icon">&#9660;</span></th>
+          </tr>
+        </thead>
+        <tbody id="extTableBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer" id="extTableFooter"></div>
+  </div>
+</div>
+
 <footer>Generated by GeneExt &bull; {s['run_date']}</footer>
 
 <!-- Chart.js via CDN (requires internet); charts degrade gracefully offline -->
@@ -398,29 +587,129 @@ footer{{text-align:center;font-size:.7rem;color:#aab4c0;padding:20px 0 32px}}
 const D = {payload_json};
 const S = D.summary;
 
-// ── Stat cards ─────────────────────────────────────────────────────────────
-const CARDS = [
-  {{value: S.n_extended,   suffix: '/' + S.n_genes, label: 'Genes extended',           cls: 'accent-teal'}},
-  {{value: S.pct_extended, suffix: '%',              label: 'Extension rate',            cls: 'accent-green'}},
-  {{value: S.median_ext,   suffix: 'bp',             label: 'Median extension',          cls: 'accent-orange'}},
-  {{value: S.mean_ext,     suffix: 'bp',             label: 'Mean extension',            cls: 'accent-blue'}},
-  {{value: S.max_ext,      suffix: 'bp',             label: 'Max extension',             cls: 'accent-purple'}},
-  {{value: S.n_genic_peaks,suffix: '',               label: 'Genic peaks',               cls: 'accent-teal'}},
-  {{value: S.n_noov_peaks, suffix: '',               label: 'Non-overlapping peaks',     cls: 'accent-blue'}},
-  {{value: S.cov_percentile || '—', suffix: S.cov_percentile ? 'th pct' : '',
-    label: 'Coverage percentile', cls: 'accent-red'}},
+// ── Stat cards (grouped) ────────────────────────────────────────────────────
+const readsLabel = S.n_reads
+  ? (S.n_reads.toLocaleString() + (S.subsampled ? ' &#9432;' : ''))
+  : '—';
+const readsHint = S.subsampled
+  ? '<div style="font-size:.62rem;color:#ff9f43;margin-top:4px">&#9888; BAM was subsampled</div>'
+  : '';
+
+const CARD_GROUPS = [
+  {{
+    title: 'Gene Extension',
+    cards: [
+      {{value: S.n_extended, suffix: '/' + S.n_genes, label: 'Genes extended',     cls: 'accent-teal',   id: 'cardGenesExtended', clickable: true}},
+      {{value: S.pct_extended, suffix: '%',            label: 'Extension rate',     cls: 'accent-green'}},
+      {{value: S.median_ext,   suffix: 'bp',           label: 'Median extension',   cls: 'accent-orange'}},
+      {{value: S.mean_ext,     suffix: 'bp',           label: 'Mean extension',     cls: 'accent-blue'}},
+      {{value: S.max_ext,      suffix: 'bp',           label: 'Max extension',      cls: 'accent-purple'}},
+    ]
+  }},
+  {{
+    title: 'Peaks',
+    cards: [
+      {{value: S.n_genic_peaks, suffix: '',  label: 'Genic peaks',              cls: 'accent-teal'}},
+      {{value: S.n_noov_peaks,  suffix: '',  label: 'Non-overlapping peaks',    cls: 'accent-blue'}},
+      ...(S.n_orphan_peaks ? [{{value: S.n_orphan_peaks, suffix: '', label: 'Orphan peak clusters', cls: 'accent-purple'}}] : []),
+      {{value: S.cov_percentile || '—', suffix: S.cov_percentile ? 'th pct' : '', label: 'Coverage percentile', cls: 'accent-red'}},
+    ]
+  }},
+  {{
+    title: 'Reads',
+    cards: [
+      {{value: readsLabel, suffix: '', label: 'Reads used for peak calling', cls: 'accent-teal', extraHint: readsHint}},
+    ]
+  }},
 ];
 
 (function buildCards() {{
-  const wrap = document.getElementById('cards');
-  CARDS.forEach(c => {{
-    wrap.innerHTML += `
-      <div class="card ${{c.cls}}">
+  const wrap = document.getElementById('summaryCards');
+  CARD_GROUPS.forEach(g => {{
+    if (!g.cards || !g.cards.length) return;
+    wrap.innerHTML += `<p class="card-group-label">${{g.title}}</p>`;
+    let row = '<div class="cards">';
+    g.cards.forEach(c => {{
+      const extra = c.clickable ? ' clickable' : '';
+      const idAttr = c.id ? ` id="${{c.id}}"` : '';
+      const hint = c.clickable
+        ? '<div style="font-size:.62rem;color:#00b4d8;margin-top:4px">Click to view &#8599;</div>'
+        : (c.extraHint || '');
+      row += `<div class="card ${{c.cls}}${{extra}}"${{idAttr}}>
         <div class="card-value">${{c.value}}<span>${{c.suffix}}</span></div>
         <div class="card-label">${{c.label}}</div>
+        ${{hint}}
       </div>`;
+    }});
+    row += '</div>';
+    wrap.innerHTML += row;
   }});
+  const geCard = document.getElementById('cardGenesExtended');
+  if (geCard) geCard.addEventListener('click', openExtModal);
 }})();
+
+// ── Extended genes modal ────────────────────────────────────────────────────
+let extSortCol = 'ext', extSortAsc = false;
+let extFilteredRows = D.ext_table ? [...D.ext_table] : [];
+
+function renderExtTable() {{
+  const q = (document.getElementById('extSearch').value || '').toLowerCase();
+  extFilteredRows = (D.ext_table || []).filter(r =>
+    r.gene.toLowerCase().includes(q) || r.peak.toLowerCase().includes(q)
+  );
+  extFilteredRows.sort((a, b) => {{
+    const va = a[extSortCol], vb = b[extSortCol];
+    if (typeof va === 'number') return extSortAsc ? va - vb : vb - va;
+    return extSortAsc ? String(va).localeCompare(vb) : String(vb).localeCompare(va);
+  }});
+  const tbody = document.getElementById('extTableBody');
+  tbody.innerHTML = extFilteredRows.map(r => `
+    <tr>
+      <td>${{r.gene}}</td>
+      <td>${{r.peak}}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600">${{r.ext.toLocaleString()}}</td>
+    </tr>`).join('');
+  document.getElementById('extTableFooter').textContent =
+    extFilteredRows.length + ' of ' + (D.ext_table || []).length + ' genes';
+  // update sort icons
+  document.querySelectorAll('#extTable th').forEach(th => {{
+    const icon = th.querySelector('.sort-icon');
+    if (th.dataset.col === extSortCol) {{
+      th.classList.add('sort-active');
+      icon.innerHTML = extSortAsc ? '&#9650;' : '&#9660;';
+    }} else {{
+      th.classList.remove('sort-active');
+      icon.innerHTML = '&#9661;';
+    }}
+  }});
+}}
+
+function openExtModal() {{
+  document.getElementById('extModal').classList.add('open');
+  document.getElementById('extSearch').value = '';
+  extSortCol = 'ext'; extSortAsc = false;
+  renderExtTable();
+}}
+
+function closeExtModal() {{
+  document.getElementById('extModal').classList.remove('open');
+}}
+
+document.getElementById('extModalClose').addEventListener('click', closeExtModal);
+document.getElementById('extModal').addEventListener('click', e => {{
+  if (e.target === document.getElementById('extModal')) closeExtModal();
+}});
+document.addEventListener('keydown', e => {{
+  if (e.key === 'Escape') closeExtModal();
+}});
+document.getElementById('extSearch').addEventListener('input', renderExtTable);
+document.querySelectorAll('#extTable th').forEach(th => {{
+  th.addEventListener('click', () => {{
+    if (extSortCol === th.dataset.col) extSortAsc = !extSortAsc;
+    else {{ extSortCol = th.dataset.col; extSortAsc = th.dataset.col !== 'ext'; }}
+    renderExtTable();
+  }});
+}});
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {{
